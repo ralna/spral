@@ -1,0 +1,141 @@
+name: Sanitizers
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  build:
+    name: SPRAL/${{ matrix.os }}/${{ matrix.compiler }}/${{ matrix.compiler_version }}/METIS ${{ matrix.metis }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        compiler_version: ['13']
+        arch: ['x64']
+        metis: [32, 64]
+        include:
+          - compiler: gcc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out SPRAL
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Meson and Ninja
+        run: pip install meson ninja
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          DEPS="$GITHUB_WORKSPACE/.."
+          cd $DEPS
+          mkdir deps
+          DLEXT="so"
+          LIBDIR="lib"
+          PLATFORM="x86_64-linux-gnu"
+          METIS_VERSION="5.1.2"
+          OPENBLAS_VERSION="0.3.23"
+          HWLOC_VERSION="2.10.0"
+          MKL_VERSION="2024.0.0"
+          wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v${METIS_VERSION}%2B0/METIS.v${METIS_VERSION}.$PLATFORM.tar.gz
+          tar -xzvf METIS.v${METIS_VERSION}.$PLATFORM.tar.gz -C deps
+          if [[ "${{matrix.metis}}" == "64" ]]; then
+            rm deps/include/metis.h
+            rm deps/$LIBDIR/libmetis.$DLEXT
+            cp deps/$LIBDIR/metis/metis_Int64_Real32/include/metis.h deps/include/metis.h
+            cp deps/$LIBDIR/metis/metis_Int64_Real32/$LIBDIR/libmetis_Int64_Real32.$DLEXT deps/$LIBDIR/libmetis_Int64_Real32.$DLEXT
+          fi
+          wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v${OPENBLAS_VERSION}%2B0/OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
+          tar -xzvf OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz -C deps
+          wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v${HWLOC_VERSION}%2B0/Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz
+          tar -xzvf Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz -C deps
+          if [[ "${{matrix.os}}" == "ubuntu-latest" ]]; then
+            wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v${MKL_VERSION}%2B0/MKL.v${MKL_VERSION}.$PLATFORM.tar.gz
+            tar -xzvf MKL.v${MKL_VERSION}.$PLATFORM.tar.gz -C deps
+          fi
+          rm *.tar.gz
+
+      - name: Install compilers
+        uses: fortran-lang/setup-fortran@main
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.compiler_version }}
+
+      # Uncomment this section to obtain ssh access to VM
+      # - name: Setup tmate session
+      # if: matrix.os == 'windows-latest'
+      # uses: mxschmitt/action-tmate@v3
+
+      - name: Setup SPRAL
+        shell: bash
+        run: |
+          DEPS="$GITHUB_WORKSPACE/.."
+          LIBDIR="lib"
+          LIBHWLOC="hwloc"
+          LIBMETIS="metis"
+          METIS64="false"
+          LIBBLAS="openblas"
+          LIBLAPACK="openblas"
+          CSTD="c99"
+          CPPSTD="c++11"
+          LD_CLASSIC=""
+          if [[ "${{matrix.metis}}" == "64" ]]; then
+            LIBMETIS="metis_Int64_Real32"
+            METIS64="true"
+          fi
+          meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson \
+                               --buildtype=debug \
+                               -Db_sanitize=address \
+                               -Dexamples=true \
+                               -Dtests=true \
+                               -Dlibmetis_path=$DEPS/deps/$LIBDIR \
+                               -Dlibmetis=$LIBMETIS \
+                               -Dmetis64=$METIS64 \
+                               -Dlibblas_path=$DEPS/deps/$LIBDIR \
+                               -Dlibblas=$LIBBLAS \
+                               -Dlibblas_include=../deps/include \
+                               -Dliblapack_path=$DEPS/deps/$LIBDIR \
+                               -Dliblapack=$LIBLAPACK \
+                               -Dlibhwloc_path=$DEPS/deps/$LIBDIR \
+                               -Dlibhwloc=$LIBHWLOC \
+                               -Dlibhwloc_include=../deps/include \
+                               -Dc_std=$CSTD \
+                               -Dcpp_std=$CPPSTD \
+                               -Dfortran_link_args=${LD_CLASSIC} \
+                               -Dcpp_link_args=${LD_CLASSIC}
+
+      - name: Build SPRAL
+        shell: bash
+        run: |
+          meson compile -C builddir
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_meson-log.txt
+          path: builddir/meson-logs/meson-log.txt
+
+      - name: Install SPRAL
+        shell: bash
+        run: |
+          meson install -C builddir
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_install-log.txt
+          path: builddir/meson-logs/install-log.txt
+
+      - name: Test SPRAL
+        shell: bash
+        run: |
+          meson test -C builddir
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_testlog.txt
+          path: builddir/meson-logs/testlog.txt
