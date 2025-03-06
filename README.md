@@ -98,4 +98,4 @@ In BibTeX, the citation is:
 
 If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:
 
-> SPRAL: an open-source library for sparse linear algebra, Version 2025-03-03, https://github.com/ralna/spral, March 2025.
+> SPRAL: an open-source library for sparse linear algebra, Version 2025-03-06, https://github.com/ralna/spral, March 2025.
