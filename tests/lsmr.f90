@@ -27,15 +27,116 @@
 ! Extended and redesigned to provide more comprehensive testing
 ! (as required by SPRAL) and for reverse communication interface.
 !
-program spral_lsmr_test
-  use spral_lsmr
-  use spral_random
-  use spral_random_matrix, only : random_matrix_generate
+module spral_lsmr_test_helpers
+
   implicit none
 
   integer(4),  parameter :: ip = kind( 1 )
   integer(4),  parameter :: wp = kind( 1.0d+0 )
   real(wp),    parameter :: zero = 0.0_wp, one = 1.0_wp, two = 2.0_wp
+
+  real(wp), allocatable :: d(:), hy(:), hz(:) ! These define A = Y D Z.
+  real(wp), allocatable :: wm(:), wn(:)       ! Work vectors.
+
+contains
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine Hprod (n,z,x)
+
+    integer(ip),  intent(in)    :: n
+    real(wp), intent(in)    :: z(n)
+    real(wp), intent(inout) :: x(n)
+
+    !-------------------------------------------------------------------
+    ! Hprod  applies a Householder transformation stored in z
+    ! to return x = (I - 2*z*z')*x.
+    !
+    ! 23 Sep 2007: Fortran 90 version.
+    !-------------------------------------------------------------------
+
+    integer(ip)             :: i
+    real(wp)                :: s
+
+    s = zero
+    do i = 1,n
+       s = z(i)*x(i) + s
+    end do
+
+    s = s + s
+    x = x - s*z
+
+  end subroutine Hprod
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine Aprod1(m,n,x,y)
+
+    integer(ip),  intent(in)    :: m,n
+    real(wp), intent(in)        :: x(n)
+    real(wp), intent(inout)     :: y(m)
+
+    !-------------------------------------------------------------------
+    ! Aprod1 computes y = y + A*x without altering x,
+    ! where A is a test matrix of the form  A = Y*D*Z,
+    ! and the matrices D, Y, Z are represented by
+    ! the allocatable vectors d, hy, hz in this module.
+    !
+    ! 23 Sep 2007: Fortran 90 version.
+    !-------------------------------------------------------------------
+
+    intrinsic           :: min
+    integer(ip)         :: minmn
+
+    minmn = min(m,n)
+    wn    = x
+    call Hprod (n,hz,wn)
+    wm(1:minmn) = d(1:minmn)*wn(1:minmn)
+    wm(n+1:m)   = zero
+    call Hprod (m,hy,wm)
+    y = y + wm
+
+  end subroutine Aprod1
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine Aprod2(m,n,x,y)
+
+    integer(ip),  intent(in)    :: m,n
+    real(wp), intent(inout)     :: x(n)
+    real(wp), intent(in)        :: y(m)
+
+    !-------------------------------------------------------------------
+    ! Aprod2 computes x = x + A'*y without altering y,
+    ! where A is a test matrix of the form  A = Y*D*Z,
+    ! and the matrices D, Y, Z are represented by
+    ! the allocatable vectors d, hy, hz in this module.
+    !
+    ! 23 Sep 2007: Fortran 90 version.
+    !-------------------------------------------------------------------
+
+    intrinsic               :: min
+    integer(ip)             :: minmn
+
+    minmn = min(m,n)
+    wm    = y
+    call Hprod (m,hy,wm)
+    wn(1:minmn) = d(1:minmn)*wm(1:minmn)
+    wn(m+1:n)   = zero
+    call Hprod (n,hz,wn)
+    x = x + wn
+
+  end subroutine Aprod2
+
+end module spral_lsmr_test_helpers
+
+program spral_lsmr_test
+  use spral_lsmr
+  use spral_random
+  use spral_random_matrix, only : random_matrix_generate
+  use spral_lsmr_test_helpers
+  implicit none
+
   real(wp),    parameter :: power = 0.5_wp
   real(wp),    parameter :: tol2 = 1.0d-7
   real(wp),    parameter :: tol1 = 1.0d-9
@@ -63,10 +164,6 @@ program spral_lsmr_test
   ! 24 Oct 2007: Use real(wp) instead of compiler option -r8.
   ! 23 Nov 2015: Reverse communication variant
   !---------------------------------------------------------------------
-
-  real(wp), allocatable :: d(:), hy(:), hz(:) ! These define A = Y D Z.
-  real(wp), allocatable :: wm(:), wn(:)       ! Work vectors.
-
 
   ! Local variables
   integer(ip)  :: flag
@@ -1340,94 +1437,6 @@ contains
       /  ' Relative error in  x  =', e10.2)
 
   end subroutine lsmrtest
-
-  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine Hprod (n,z,x)
-
-    integer(ip),  intent(in)    :: n
-    real(wp), intent(in)    :: z(n)
-    real(wp), intent(inout) :: x(n)
-
-    !-------------------------------------------------------------------
-    ! Hprod  applies a Householder transformation stored in z
-    ! to return x = (I - 2*z*z')*x.
-    !
-    ! 23 Sep 2007: Fortran 90 version.
-    !-------------------------------------------------------------------
-
-    integer(ip)             :: i
-    real(wp)                :: s
-
-    s = zero
-    do i = 1,n
-       s = z(i)*x(i) + s
-    end do
-
-    s = s + s
-    x = x - s*z
-
-  end subroutine Hprod
-
-  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine Aprod1(m,n,x,y)
-
-    integer(ip),  intent(in)    :: m,n
-    real(wp), intent(in)        :: x(n)
-    real(wp), intent(inout)     :: y(m)
-
-    !-------------------------------------------------------------------
-    ! Aprod1 computes y = y + A*x without altering x,
-    ! where A is a test matrix of the form  A = Y*D*Z,
-    ! and the matrices D, Y, Z are represented by
-    ! the allocatable vectors d, hy, hz in this module.
-    !
-    ! 23 Sep 2007: Fortran 90 version.
-    !-------------------------------------------------------------------
-
-    intrinsic           :: min
-    integer(ip)         :: minmn
-
-    minmn = min(m,n)
-    wn    = x
-    call Hprod (n,hz,wn)
-    wm(1:minmn) = d(1:minmn)*wn(1:minmn)
-    wm(n+1:m)   = zero
-    call Hprod (m,hy,wm)
-    y = y + wm
-
-  end subroutine Aprod1
-
-  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine Aprod2(m,n,x,y)
-
-    integer(ip),  intent(in)    :: m,n
-    real(wp), intent(inout)     :: x(n)
-    real(wp), intent(in)        :: y(m)
-
-    !-------------------------------------------------------------------
-    ! Aprod2 computes x = x + A'*y without altering y,
-    ! where A is a test matrix of the form  A = Y*D*Z,
-    ! and the matrices D, Y, Z are represented by
-    ! the allocatable vectors d, hy, hz in this module.
-    !
-    ! 23 Sep 2007: Fortran 90 version.
-    !-------------------------------------------------------------------
-
-    intrinsic               :: min
-    integer(ip)             :: minmn
-
-    minmn = min(m,n)
-    wm    = y
-    call Hprod (m,hy,wm)
-    wn(1:minmn) = d(1:minmn)*wm(1:minmn)
-    wn(m+1:n)   = zero
-    call Hprod (n,hz,wn)
-    x = x + wn
-
-  end subroutine Aprod2
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
