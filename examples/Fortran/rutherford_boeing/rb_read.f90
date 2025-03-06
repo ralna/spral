@@ -29,4 +29,6 @@ program rb_read_example
    write(*, "(3a)") "Matrix '", trim(title), "'"
    call print_matrix(6, -1, SPRAL_MATRIX_REAL_SYM_INDEF, m, n, ptr, row, val)
 
+   deallocate(ptr,row,val)
+
 end program rb_read_example
