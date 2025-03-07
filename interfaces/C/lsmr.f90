@@ -182,6 +182,7 @@ integer(C_INT) function spral_lsmr_free(ckeep) bind(C)
 
   ! Call Fortran routine, capture stat as return parameter
   call lsmr_free(fkeep, spral_lsmr_free)
+  deallocate(fkeep)
 
   ! Set ckeep to NULL if deallocation succeeded
   if (spral_lsmr_free .eq. 0) ckeep = C_NULL_PTR
