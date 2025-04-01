@@ -202,7 +202,9 @@ void find_maxloc(const int from, const T *a, int lda, T &bestv_out, int &rloc, i
          cloc = bc2[i].i;
       }
    }
-   bestv_out = a[cloc*lda+rloc];
+   bestv_out =
+      (cloc < BLOCK_SIZE && rloc < BLOCK_SIZE) ? a[cloc*lda+rloc]
+                                               : 0.0;
 }
 
 /** Returns true if a 2x2 pivot can be stably inverted.
@@ -297,6 +299,9 @@ void block_ldlt(int from, int *perm, T *a, int lda, T *d, T *ldwork,
       T bestv; // Value of maximum entry
       int t, m; // row and col location of maximum entry
       find_maxloc<T,BLOCK_SIZE>(p, a, lda, bestv, t, m);
+
+      // Handle case where find_maxloc failed (e.g., due to NaNs in the input)
+      if (t >= BLOCK_SIZE || m >= BLOCK_SIZE) throw SingularError(p);
 
       // Handle case where everything remaining is small
       // NB: There might be delayed columns!
