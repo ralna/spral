@@ -207,29 +207,35 @@ omp_env = ['OMP_CANCELLATION=true', 'OMP_PROC_BIND=true']
 if build_tests
 
   foreach test: spral_tests
-    name = test[0]
-    file = test[1]
+    package = test[0]
+    name = test[1]
+    file = test[2]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'fortran', include_directories: libspral_include),
+         suite : [package, 'tests', 'fortran'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 
   foreach test: spral_c_tests
-    name = test[0]
-    file = test[1]
+    package = test[0]
+    name = test[1]
+    file = test[2]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'c', include_directories : libspral_include),
+         suite : [package, 'tests', 'C'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 
   foreach test: spral_cpp_tests
-    name = test[0]
-    file = test[1]
+    package = test[0]
+    name = test[1]
+    file = test[2]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'cpp', include_directories : libspral_include),
+         suite : [package, 'tests', 'C++'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 endif
@@ -240,24 +246,28 @@ if build_examples
   fortran_examples_folder = 'examples/Fortran'
 
   foreach example: spral_examples
-    name = example[0]
-    file = example[1]
+    package = example[0]
+    name = example[1]
+    file = example[2]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'fortran', include_directories : libspral_include,
                     install : true, install_dir : fortran_examples_folder),
+         suite : [package, 'examples', 'fortran'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 
   c_examples_folder = 'examples/C'
 
   foreach example: spral_c_examples
-    name = example[0]
-    file = example[1]
+    package = example[0]
+    name = example[1]
+    file = example[2]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'c', include_directories : libspral_include,
                     install : true, install_dir : c_examples_folder),
+         suite : [package, 'examples', 'C'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 endif
