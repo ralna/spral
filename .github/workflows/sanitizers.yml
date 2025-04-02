@@ -91,7 +91,7 @@ jobs:
           fi
           meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson \
                                --buildtype=debug \
-                               -Db_sanitize=address \
+                               -Db_sanitize=address,undefined \
                                -Dexamples=true \
                                -Dtests=true \
                                -Dlibmetis_path=$DEPS/deps/$LIBDIR \
