@@ -99,7 +99,7 @@ jobs:
           fi
           # wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v${OPENBLAS_VERSION}%2B0/OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
           # tar -xzvf OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz -C deps
-          wget https://github.com/JuliaBinaryWrappers/ReferenceBLAS32_jll.jl/releases/download/ReferenceBLAS32-v${BLAS_VERSION}%2B0/ReferenceBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
+          wget https://github.com/JuliaBinaryWrappers/ReferenceBLAS32_jll.jl/releases/download/ReferenceBLAS32-v${BLAS_VERSION}%2B0/ReferenceBLAS32.v${BLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
           tar -xzvf ReferenceBLAS32.v${BLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz -C deps
           wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v${HWLOC_VERSION}%2B0/Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz
           tar -xzvf Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz -C deps
