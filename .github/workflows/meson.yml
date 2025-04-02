@@ -39,29 +39,9 @@ jobs:
             arch: 'arm64'
             metis: 64
             allow_failure: true
-          # - os: windows-latest
-          #   compiler: intel
-          #   compiler_version: '2023.2'
-          #   metis: 32
-          #   allow_failure: true
-          # - os: windows-latest
-          #   compiler: intel-classic
-          #   compiler_version: '2021.10'
-          #   metis: 32
-          #   allow_failure: true
-          # - os: ubuntu-latest
-          #   compiler: intel-classic
-          #   compiler_version: '2021.10'
-          #   metis: 32
-          #   allow_failure: true
-          # - os: macos-13
-          #   compiler: intel-classic
-          #   compiler_version: '2021.10'
-          #   metis: 32
-          #   allow_failure: true
           # - os: ubuntu-latest
           #   compiler: nvidia-hpc
-          #   compiler_version: '23.11'
+          #   compiler_version: '25.1'
           #   metis: 32
           #   allow_failure: true
     runs-on: ${{ matrix.os }}
