@@ -84,6 +84,7 @@ jobs:
             PLATFORM="x86_64-w64-mingw32"
             choco install wget
           fi
+          echo "LBT_DEFAULT_LIBS=$DEPS/$LIBDIR/libblas32.$dlext;$DEPS/$LIBDIR/liblapack32.$dlext" >> $GITHUB_ENV
           METIS_VERSION="5.1.2"
           OPENBLAS_VERSION="0.3.29"
           BLAS_VERSION="3.12.0"
@@ -125,10 +126,6 @@ jobs:
         if: matrix.compiler == 'intel'
         shell: bash
         run: echo "FC=ifort" >> $GITHUB_ENV
-
-      - name: libblastrampoline
-        shell: bash
-        run: echo "LBT_DEFAULT_LIBS=$DEPS/$LIBDIR/libblas32.$dlext;$DEPS/$LIBDIR/liblapack32.$dlext" >> $GITHUB_ENV
 
       # Uncomment this section to obtain ssh access to VM
       # - name: Setup tmate session
