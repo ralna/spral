@@ -84,7 +84,6 @@ jobs:
             PLATFORM="x86_64-w64-mingw32"
             choco install wget
           fi
-          echo "LBT_DEFAULT_LIBS=$DEPS/$LIBDIR/libblas32.$dlext;$DEPS/$LIBDIR/liblapack32.$dlext" >> $GITHUB_ENV
           METIS_VERSION="5.1.2"
           OPENBLAS_VERSION="0.3.29"
           BLAS_VERSION="3.12.0"
@@ -115,6 +114,27 @@ jobs:
             tar -xzvf MKL.v${MKL_VERSION}.$PLATFORM.tar.gz -C deps
           fi
           rm *.tar.gz
+
+      - name: Set the environment variables LIBRARY_PATH, LD_LIBRARY_PATH and DYLD_LIBRARY_PATH
+        shell: bash
+        run: |
+          if [[ "${{ inputs.os }}" == "ubuntu-latest" || "${{ inputs.os }}" == "ubuntu-24.04-arm" ]]; then
+            echo "LIBRARY_PATH=$LIBRARY_PATH:$GITHUB_WORKSPACE/spral/lib:$GITHUB_WORKSPACE/../deps/lib" >> $GITHUB_ENV
+            echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/spral/lib:$GITHUB_WORKSPACE/../deps/lib" >> $GITHUB_ENV
+            echo "LBT_DEFAULT_LIBS=$GITHUB_WORKSPACE/../deps/lib/libblas32.so;$GITHUB_WORKSPACE/../deps/lib/liblapack32.so" >> $GITHUB_ENV
+          fi
+          if [[ "${{ inputs.os }}" == "macos-13" || "${{inputs.os}}" == "macos-latest" ]]; then
+            echo "LIBRARY_PATH=$LIBRARY_PATH:$GITHUB_WORKSPACE/spral/lib:$GITHUB_WORKSPACE/../deps/lib" >> $GITHUB_ENV
+            echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/spral/lib:$GITHUB_WORKSPACE/../deps/lib" >> $GITHUB_ENV
+            echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GITHUB_WORKSPACE/spral/lib:$GITHUB_WORKSPACE/../deps/lib" >> $GITHUB_ENV
+            echo "DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH:$GITHUB_WORKSPACE/spral/lib:$GITHUB_WORKSPACE/../deps/lib" >> $GITHUB_ENV
+            echo "LBT_DEFAULT_LIBS=$GITHUB_WORKSPACE/../deps/lib/libblas32.dylib;$GITHUB_WORKSPACE/../deps/lib/liblapack32.dylib" >> $GITHUB_ENV
+          fi
+          if [[ "${{ inputs.os }}" == "windows-latest" ]]; then
+            echo "$GITHUB_WORKSPACE/../deps/bin" >> "$GITHUB_PATH"
+            echo "$$GITHUB_WORKSPACE/spral/lib" >> "$GITHUB_PATH"
+            echo "LBT_DEFAULT_LIBS=$GITHUB_WORKSPACE/../deps/bin/libblas32.dll;$GITHUB_WORKSPACE/../deps/bin/liblapack32.dll" >> $GITHUB_ENV
+          fi
 
       - name: Install compilers
         uses: fortran-lang/setup-fortran@main
