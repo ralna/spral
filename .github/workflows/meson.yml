@@ -85,9 +85,10 @@ jobs:
             choco install wget
           fi
           METIS_VERSION="5.1.2"
-          OPENBLAS_VERSION="0.3.23"
-          HWLOC_VERSION="2.10.0"
-          MKL_VERSION="2024.0.0"
+          OPENBLAS_VERSION="0.3.29"
+          BLAS_VERSION="3.12.0"
+          HWLOC_VERSION="2.12.0"
+          MKL_VERSION="2025.0.1"
           wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v${METIS_VERSION}%2B0/METIS.v${METIS_VERSION}.$PLATFORM.tar.gz
           tar -xzvf METIS.v${METIS_VERSION}.$PLATFORM.tar.gz -C deps
           if [[ "${{matrix.metis}}" == "64" ]]; then
@@ -96,8 +97,10 @@ jobs:
             cp deps/$LIBDIR/metis/metis_Int64_Real32/include/metis.h deps/include/metis.h
             cp deps/$LIBDIR/metis/metis_Int64_Real32/$LIBDIR/libmetis_Int64_Real32.$DLEXT deps/$LIBDIR/libmetis_Int64_Real32.$DLEXT
           fi
-          wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v${OPENBLAS_VERSION}%2B0/OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
-          tar -xzvf OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz -C deps
+          # wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v${OPENBLAS_VERSION}%2B0/OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
+          # tar -xzvf OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz -C deps
+          wget https://github.com/JuliaBinaryWrappers/ReferenceBLAS32_jll.jl/releases/download/ReferenceBLAS32-v${BLAS_VERSION}%2B0/ReferenceBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
+          tar -xzvf ReferenceBLAS32.v${BLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz -C deps
           wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v${HWLOC_VERSION}%2B0/Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz
           tar -xzvf Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz -C deps
           if [[ "${{matrix.os}}" == "ubuntu-latest" ]]; then
@@ -130,8 +133,8 @@ jobs:
           LIBHWLOC="hwloc"
           LIBMETIS="metis"
           METIS64="false"
-          LIBBLAS="openblas"
-          LIBLAPACK="openblas"
+          LIBBLAS="blas"
+          LIBLAPACK="blas"
           CSTD="c99"
           CPPSTD="c++11"
           LD_CLASSIC=""
