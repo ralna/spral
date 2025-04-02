@@ -78,3 +78,8 @@ option('libmetis_version',
        choices : ['4', '5'],
        value : '5',
        description : 'Version of the METIS library to use')
+
+option('openmp',
+       type : 'boolean',
+       value : true,
+       description : 'option to compile SPRAL with OpenMP')
