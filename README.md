@@ -43,17 +43,6 @@ meson install -C builddir
 ```
 For more options (including how to specify paths to the above libraries) please see `meson_options.txt`.
 
-Alternatively, you can use a standard autotools-based build system:
-```bash
-./autogen.sh # If compiling from fresh git checkout
-mkdir build
-cp nvcc_arch_sm.c build/ # If building for GPU
-cd build
-../configure --with-metis="-L/path/to/metis -lmetis"
-make
-make install
-```
-
 When using SSIDS please ensure the following environment variables are set:
 ```bash
 export OMP_CANCELLATION=TRUE
