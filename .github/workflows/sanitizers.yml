@@ -133,7 +133,7 @@ jobs:
       - name: Test SPRAL
         shell: bash
         run: |
-          meson test -C builddir
+          meson test -C builddir ssidst ssmfet lsmrt randomt random_matrixt rutherford_boeingt scalingt ssmfet_c rb_writes rb_reads auction_syms auction_unsyms equilib_syms equilib_unsyms hungarian_syms hungarian_unsyms hermitians precond_cores precond_experts precond_ssmfes shift_inverts lsmrs randoms random_matrixs ssidss rb_reads_c rb_writes_c auction_syms_c auction_unsyms_c equilib_syms_c equilib_unsyms_c hungarian_syms_c hungarian_unsyms_c hermitians_c precond_cores_c precond_experts_c precond_ssmfes_c shift_inverts_c lsmrs_c randoms_c random_matrixs_c ssidss_c ssids_topologys_c
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
