@@ -1,5 +1,5 @@
-spral_tests += [['ssmfet', files('ssmfe.f90')]]
+spral_tests += [['ssmfe', 'ssmfet', files('ssmfe.f90')]]
 
 if has_cblash
-  spral_c_tests += [['ssmfet_c', files('ssmfe_ciface.c')]]
+  spral_c_tests += [['ssmfe', 'ssmfet_c', files('ssmfe_ciface.c')]]
 endif
