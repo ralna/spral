@@ -88,7 +88,7 @@ jobs:
           OPENBLAS_VERSION="0.3.29"
           BLAS_VERSION="3.12.0"
           LAPACK_VERSION="3.12.0"
-          HWLOC_VERSION="2.10.0"
+          HWLOC_VERSION="2.12.0"
           MKL_VERSION="2025.0.1"
           wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v${METIS_VERSION}%2B0/METIS.v${METIS_VERSION}.$PLATFORM.tar.gz
           tar -xzvf METIS.v${METIS_VERSION}.$PLATFORM.tar.gz -C deps
