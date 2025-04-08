@@ -72,7 +72,8 @@ Routines
    :param scaling[n]: returns scaling found by routine.
    :param match: may be `NULL`; otherwise, an array of size `n` to output the
       matching found by routine. Row `i` is matched to column `match[i]`, or is
-      unmatched if `match[i]=0`.
+      unmatched if `match[i]=-1` when `options.array_base=0` (the default) or
+      if `match[i]=0` when `options.array_base=1`.
    :param options: controls behaviour of routine.
    :param inform: returns information on execution of routine.
 
@@ -96,7 +97,8 @@ Routines
    :param cscaling[n]: returns column scaling found by routine
    :param match: may be `NULL`; otherwise, an array of size `m` to output the
       matching found by routine. Row `i` is matched to column `match[i]`, or is
-      unmatched if `match[i]=0`.
+      unmatched if `match[i]=-1` when `options.array_base=0` (the default) or
+      if `match[i]=0` when `options.array_base=1`.
    :param options: controls behaviour of routine
    :param inform: returns information on execution of routine
 
@@ -504,7 +506,8 @@ Routines
    :param scaling[n]: returns scaling found by routine.
    :param match: may be `NULL`; otherwise, an array of size `n` to output the
       matching found by routine. Row `i` is matched to column `match[i]`, or is
-      unmatched if `match[i]=0`.
+      unmatched if `match[i]=-1` when `options.array_base=0` (the default) or
+      if `match[i]=0` when `options.array_base=1`.
    :param options: controls behaviour of routine.
    :param inform: returns information on execution of routine.
 
@@ -528,7 +531,8 @@ Routines
    :param cscaling[n]: returns column scaling found by routine.
    :param match: may be `NULL`; otherwise, an array of size `n` to output the
       matching found by routine. Row `i` is matched to column `match[i]`, or is
-      unmatched if `match[i]=0`.
+      unmatched if `match[i]=-1` when `options.array_base=0` (the default) or
+      if `match[i]=0` when `options.array_base=1`.
    :param options: controls behaviour of routine.
    :param inform: returns information on execution of routine.
 

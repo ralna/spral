@@ -17,6 +17,10 @@ The arrays should be set such that the ``k``-th entry is in row
 ``row[k]`` and column ``col[k]`` with value ``val[k]``. Entries that are
 zero, including those on the diagonal, need not be specified.
 
+The row numbers in `row[]` and column numbers in `col[]` are zero-indexed by
+default (`options.array_base=0`), to use one-based indexing set
+`options.array_base=1`.
+
 For **symmetric matrices**, only the lower *or* upper triangular entries of
 :math:`A` should be supplied. For **unsymmetric matrices**, all entries in the
 matrix should be supplied. Duplicate entries will be summed and out-of-range
@@ -44,6 +48,6 @@ is described by the following data:
 
    int    n     = 5;
    int    ne    = 9;
-   int    row[] = { 1,   2,   3,   4,   3,   5,   4,   5,   5 };
-   int    col[] = { 1,   1,   2,   1,   3,   3,   4,   4,   5 };
+   int    row[] = { 0,   1,   2,   3,   2,   4,   3,   4,   4 };
+   int    col[] = { 0,   0,   1,   0,   2,   2,   3,   3,   4 };
    double val[] = { 1.1, 2.2, 4.4, 3.3, 5.5, 6.6, 7.7, 8.8, 9.9 };
