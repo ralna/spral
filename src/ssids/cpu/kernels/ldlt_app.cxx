@@ -1316,7 +1316,9 @@ private:
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_DIAG");
 #endif
-               if (debug) printf("Factor(%d)\n", blk);
+               if (debug) {
+                  printf("Factor(%d)\n", blk);
+               }
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                // Store a copy for recovery in case of a failed column
                dblk.backup(backup);
@@ -1379,7 +1381,9 @@ private:
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
-                if (debug) printf("ApplyT(%d,%d)\n", blk, jblk);
+                if (debug) {
+                  printf("ApplyT(%d,%d)\n", blk, jblk);
+                }
                 BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                 BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
                 // Apply row permutation from factorization of dblk and in
@@ -1412,7 +1416,9 @@ private:
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
-                if (debug) printf("ApplyN(%d,%d)\n", iblk, blk);
+                if (debug) {
+                  printf("ApplyN(%d,%d)\n", iblk, blk);
+                }
                 BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                 BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
                 // Apply column permutation from factorization of dblk and in
@@ -1611,7 +1617,9 @@ private:
 
             // Factor diagonal: depend on perm[blk*block_size] as we init npass
             {
-               if(debug) printf("Factor(%d)\n", blk);
+               if (debug) {
+                  printf("Factor(%d)\n", blk);
+               }
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                // Store a copy for recovery in case of a failed column
                dblk.backup(backup);
@@ -1626,7 +1634,9 @@ private:
 
             // Loop over off-diagonal blocks applying pivot
             for(int jblk=0; jblk<blk; jblk++) {
-               if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
+               if (debug) {
+                   printf("ApplyT(%d,%d)\n", blk, jblk);
+               }
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
                // Apply row permutation from factorization of dblk and in
@@ -1642,7 +1652,9 @@ private:
                cdata[blk].update_passed(blkpass);
             }
             for(int iblk=blk+1; iblk<mblk; iblk++) {
-               if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
+               if (debug) {
+                   printf("ApplyN(%d,%d)\n", iblk, blk);
+               }
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
                // Apply column permutation from factorization of dblk and in
@@ -1777,10 +1789,14 @@ private:
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_DIAG");
 #endif
-               if(debug) printf("Factor(%d)\n", blk);
+               if (debug) {
+                  printf("Factor(%d)\n", blk);
+               }
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                // On first access to this block, store copy in case of failure
-               if (blk == 0) dblk.backup(backup);
+               if (blk == 0) {
+                  dblk.backup(backup);
+               }
                // Record block state as assuming we've done up to col blk
                up_to_date[blk*mblk+blk] = blk;
                // Perform actual factorization
@@ -1841,7 +1857,9 @@ private:
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
-                if (debug) printf("ApplyT(%d,%d)\n", blk, jblk);
+                if (debug) {
+                  printf("ApplyT(%d,%d)\n", blk, jblk);
+                }
                 int thread_num = omp_get_thread_num();
                 BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                 BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
@@ -1871,12 +1889,16 @@ private:
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
-                if (debug) printf("ApplyN(%d,%d)\n", iblk, blk);
+                if (debug) {
+                  printf("ApplyN(%d,%d)\n", iblk, blk);
+                }
                 int thread_num = omp_get_thread_num();
                 BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                 BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
                 // On first access to this block, store copy in case of failure
-                if (blk==0) rblk.backup(backup);
+                if (blk==0) {
+                  rblk.backup(backup);
+                }
                 // Record block state as assuming we've done up to col blk
                 up_to_date[blk*mblk+iblk] = blk;
                 // Apply column permutation from factorization of dblk
@@ -2015,10 +2037,14 @@ private:
 
          // Factor diagonal
          try {
-            if(debug) printf("Factor(%d)\n", blk);
+            if (debug) {
+               printf("Factor(%d)\n", blk);
+            }
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
             // On first access to this block, store copy in case of failure
-            if(blk==0) dblk.backup(backup);
+            if (blk == 0) {
+               dblk.backup(backup);
+            }
             // Record block state as assuming we've done up to col blk
             up_to_date[blk*mblk+blk] = blk;
             // Perform actual factorization
@@ -2041,7 +2067,9 @@ private:
 
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
-            if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
+            if (debug) {
+               printf("ApplyT(%d,%d)\n", blk, jblk);
+            }
             int thread_num = omp_get_thread_num();
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
             BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
@@ -2053,12 +2081,16 @@ private:
             // assuming everything has passed...
          }
          for(int iblk=blk+1; iblk<mblk; iblk++) {
-            if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
+            if (debug) {
+               printf("ApplyN(%d,%d)\n", iblk, blk);
+            }
             int thread_num = omp_get_thread_num();
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
             BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
             // On first access to this block, store copy in case of failure
-            if(blk==0) rblk.backup(backup);
+            if (blk == 0) {
+               rblk.backup(backup);
+            }
             // Record block state as assuming we've done up to col blk
             up_to_date[blk*mblk+iblk] = blk;
             // Apply column permutation from factorization of dblk
