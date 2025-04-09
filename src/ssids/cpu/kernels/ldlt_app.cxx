@@ -1457,8 +1457,7 @@ private:
             for (int iblk = jblk; iblk < mblk; iblk++) {
                // Calculate block index we depend on for i
                // (we only work with lower half of matrix)
-               int adep_idx = (blk < iblk) ? blk*block_size*lda + iblk*block_size
-                                           : iblk*block_size*lda + blk*block_size;
+               int adep_idx = (blk < iblk) ? blk*block_size*lda + iblk*block_size : iblk*block_size*lda + blk*block_size;
                #pragma omp task                                           \
                   firstprivate(blk, iblk, jblk)                           \
                   shared(a, abort, cdata, backup, work)                   \
