@@ -155,8 +155,8 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
    call half_to_full_drop_diag(n, ptr, row, ptr2, row2)
 
    ! Convert to C-style (0-based) indexing as expected by METIS
+   row2(1:ptr2(n+1)-1) = row2(1:ptr2(n+1)-1) - 1
    ptr2 = ptr2 - 1
-   row2 = row2 - 1
 
    ! Carry out ordering
    call METIS_SetDefaultOptions(metis_opts) ! C-style (0-based) indexing
@@ -245,8 +245,8 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    call half_to_full_drop_diag(n, ptr, row, ptr2, row2)
 
    ! Convert to C-style (0-based) indexing as expected by METIS
+   row2(1:ptr2(n+1)-1) = row2(1:ptr2(n+1)-1) - 1
    ptr2 = ptr2 - 1
-   row2 = row2 - 1
 
    ! Carry out ordering
    call METIS_SetDefaultOptions(metis_opts) ! C-style (0-based) indexing
