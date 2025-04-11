@@ -101,7 +101,7 @@ if build_openmp
     add_global_arguments('-mp', language : 'fortran')
   elif fc.get_id() == 'nagfor'
     add_global_arguments('-openmp', language : 'fortran')
-  elif fc.get_id() == 'gcc'
+  elif fc.get_id() == 'gcc' or fc.get_id() == 'llvm-flang'
     add_global_arguments('-fopenmp', language : 'fortran')
   elif fc.get_id() == 'intel' or fc.get_id() == 'intel-llvm'
     add_global_arguments('-qopenmp', language : 'fortran')
