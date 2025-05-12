@@ -1,6 +1,10 @@
 #ifndef SPRAL_H
 #define SPRAL_H
 
+#define SPRAL_VERSION_YEAR    2025
+#define SPRAL_VERSION_MONTH   03
+#define SPRAL_VERSION_DAY     06
+
 #include "spral_lsmr.h"
 #include "spral_matrix_util.h"
 #include "spral_random.h"
