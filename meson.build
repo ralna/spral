@@ -67,8 +67,18 @@ libmetis_version = get_option('libmetis_version')
 metis64 = get_option('metis64')
 
 # Dependencies
-libblas = fc.find_library(libblas_name, dirs : libblas_path, required : true)
-liblapack = fc.find_library(liblapack_name, dirs : liblapack_path, required : true)
+if libblas_path == []
+    libblas = dependency(libblas_name, required : false)
+endif
+if libblas_path != [] or not libblas.found()
+    libblas = fc.find_library(libblas_name, dirs : libblas_path, required : true)
+endif
+if liblapack_path == []
+  liblapack = dependency(liblapack_name, required : false)
+endif
+if liblapack_path != [] or not liblapack.found()
+  liblapack = fc.find_library(liblapack_name, dirs : liblapack_path, required : true)
+endif
 libmetis = fc.find_library(libmetis_name, dirs : libmetis_path, required : true)
 libhwloc = fc.find_library(libhwloc_name, dirs : libhwloc_path, required : false)
 libcuda = dependency('cuda', version : '>=10', modules : ['cublas'], required : false)
