@@ -41,7 +41,7 @@ jobs:
             allow_failure: true
           # - os: ubuntu-latest
           #   compiler: nvidia-hpc
-          #   compiler_version: '25.1'
+          #   compiler_version: '25.3'
           #   metis: 32
           #   allow_failure: true
     runs-on: ${{ matrix.os }}
