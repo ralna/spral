@@ -152,6 +152,7 @@ endif
 
 binspral_src = []
 libspral_src = []
+libspral_c_src = []
 libspral_cpp_src = []
 libspral_nvcc_src = []
 
@@ -179,7 +180,7 @@ subdir('tests')
 
 # Library
 libspral = library('spral',
-                   sources : libspral_src + libspral_cpp_src + libspral_nvcc_src,
+                   sources : libspral_src + libspral_c_src + libspral_cpp_src + libspral_nvcc_src,
                    dependencies : libspral_deps,
                    link_language : 'fortran',
                    link_args : lstdcpp,

@@ -16,6 +16,8 @@ libspral_src += files('blas_iface.f90',
                       'scaling.f90',
                       'timer.f90')
 
+libspral_c_src += files('version.c')
+
 libspral_cpp_src += files('compat.cxx',
                           'omp.cxx')
 
