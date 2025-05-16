@@ -12,4 +12,6 @@
 #include "spral_ssids.h"
 #include "spral_ssmfe.h"
 
+void get_spral_version(char version[11]);
+
 #endif // SPRAL_H
