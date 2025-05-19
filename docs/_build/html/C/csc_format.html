@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Compressed Sparse Column (CSC) Format &mdash; spral v2025-03-06 [C] documentation</title>
+  <title>Compressed Sparse Column (CSC) Format &mdash; spral v2025-05-20 [C] documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
@@ -15,7 +15,7 @@
     <link rel="shortcut icon" href="_static/favicon.ico"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=32e15803"></script>
+      <script src="_static/documentation_options.js?v=647c0742"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -109,6 +109,9 @@ the first entry in the i-th column, and <cite>ptr[n]</cite> is
 the total number of entries. <cite>ptr[]</cite> may be either <cite>int</cite> or <cite>int64_t</cite>.
 There must be no duplicate or out of range entries.
 Entries that are zero, including those on the diagonal, need not be specified.</p>
+<p>The row numbers in <cite>row[]</cite> and column pointers in <cite>ptr[]</cite> are zero-indexed by
+default (<cite>options.array_base=0</cite>), to use one-based indexing set
+<cite>options.array_base=1</cite>.</p>
 <p>For <strong>symmetric matrices</strong>, only the lower triangular entries of <span class="math notranslate nohighlight">\(A\)</span>
 should be supplied. For <strong>unsymmetric matrices</strong>, all entries in the matrix
 should be supplied.</p>
@@ -127,8 +130,8 @@ check data stored in this format.</p>
 \end{array} \right)\end{split}\]</div>
 <p>is described by the following data:</p>
 <div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w">    </span><span class="n">n</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
-<span class="kt">int</span><span class="w">    </span><span class="n">ptr</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">             </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">        </span><span class="mi">7</span><span class="p">,</span><span class="w">        </span><span class="mi">9</span><span class="p">,</span><span class="w">    </span><span class="mi">10</span><span class="w"> </span><span class="p">};</span>
-<span class="kt">int</span><span class="w">    </span><span class="n">row</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w"> </span><span class="p">};</span>
+<span class="kt">int</span><span class="w">    </span><span class="n">ptr</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">             </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">        </span><span class="mi">6</span><span class="p">,</span><span class="w">        </span><span class="mi">8</span><span class="p">,</span><span class="w">    </span><span class="mi">9</span><span class="w"> </span><span class="p">};</span>
+<span class="kt">int</span><span class="w">    </span><span class="n">row</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="w"> </span><span class="p">};</span>
 <span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">1.1</span><span class="p">,</span><span class="w"> </span><span class="mf">2.2</span><span class="p">,</span><span class="w"> </span><span class="mf">3.3</span><span class="p">,</span><span class="w"> </span><span class="mf">4.4</span><span class="p">,</span><span class="w"> </span><span class="mf">5.5</span><span class="p">,</span><span class="w"> </span><span class="mf">6.6</span><span class="p">,</span><span class="w"> </span><span class="mf">7.7</span><span class="p">,</span><span class="w"> </span><span class="mf">8.8</span><span class="p">,</span><span class="w"> </span><span class="mf">9.9</span><span class="w"> </span><span class="p">};</span>
 </pre></div>
 </div>

@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SCALING - Sparse matrix scalings &mdash; spral v2025-03-06 [C] documentation</title>
+  <title>SCALING - Sparse matrix scalings &mdash; spral v2025-05-20 [C] documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
@@ -15,7 +15,7 @@
     <link rel="shortcut icon" href="_static/favicon.ico"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=32e15803"></script>
+      <script src="_static/documentation_options.js?v=647c0742"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -180,7 +180,8 @@ row and column is (approximately) <span class="math notranslate nohighlight">\(1
 <li><p><strong>scaling[n]</strong> – returns scaling found by routine.</p></li>
 <li><p><strong>match</strong> – may be <cite>NULL</cite>; otherwise, an array of size <cite>n</cite> to output the
 matching found by routine. Row <cite>i</cite> is matched to column <cite>match[i]</cite>, or is
-unmatched if <cite>match[i]=0</cite>.</p></li>
+unmatched if <cite>match[i]=-1</cite> when <cite>options.array_base=0</cite> (the default) or
+if <cite>match[i]=0</cite> when <cite>options.array_base=1</cite>.</p></li>
 <li><p><strong>options</strong> – controls behaviour of routine.</p></li>
 <li><p><strong>inform</strong> – returns information on execution of routine.</p></li>
 </ul>
@@ -212,7 +213,8 @@ row and column is (approximately) <span class="math notranslate nohighlight">\(1
 <li><p><strong>cscaling[n]</strong> – returns column scaling found by routine</p></li>
 <li><p><strong>match</strong> – may be <cite>NULL</cite>; otherwise, an array of size <cite>m</cite> to output the
 matching found by routine. Row <cite>i</cite> is matched to column <cite>match[i]</cite>, or is
-unmatched if <cite>match[i]=0</cite>.</p></li>
+unmatched if <cite>match[i]=-1</cite> when <cite>options.array_base=0</cite> (the default) or
+if <cite>match[i]=0</cite> when <cite>options.array_base=1</cite>.</p></li>
 <li><p><strong>options</strong> – controls behaviour of routine</p></li>
 <li><p><strong>inform</strong> – returns information on execution of routine</p></li>
 </ul>
@@ -788,7 +790,8 @@ row and column is <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
 <li><p><strong>scaling[n]</strong> – returns scaling found by routine.</p></li>
 <li><p><strong>match</strong> – may be <cite>NULL</cite>; otherwise, an array of size <cite>n</cite> to output the
 matching found by routine. Row <cite>i</cite> is matched to column <cite>match[i]</cite>, or is
-unmatched if <cite>match[i]=0</cite>.</p></li>
+unmatched if <cite>match[i]=-1</cite> when <cite>options.array_base=0</cite> (the default) or
+if <cite>match[i]=0</cite> when <cite>options.array_base=1</cite>.</p></li>
 <li><p><strong>options</strong> – controls behaviour of routine.</p></li>
 <li><p><strong>inform</strong> – returns information on execution of routine.</p></li>
 </ul>
@@ -820,7 +823,8 @@ row and column is <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
 <li><p><strong>cscaling[n]</strong> – returns column scaling found by routine.</p></li>
 <li><p><strong>match</strong> – may be <cite>NULL</cite>; otherwise, an array of size <cite>n</cite> to output the
 matching found by routine. Row <cite>i</cite> is matched to column <cite>match[i]</cite>, or is
-unmatched if <cite>match[i]=0</cite>.</p></li>
+unmatched if <cite>match[i]=-1</cite> when <cite>options.array_base=0</cite> (the default) or
+if <cite>match[i]=0</cite> when <cite>options.array_base=1</cite>.</p></li>
 <li><p><strong>options</strong> – controls behaviour of routine.</p></li>
 <li><p><strong>inform</strong> – returns information on execution of routine.</p></li>
 </ul>

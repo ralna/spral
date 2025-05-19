@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coordinate (Coord) Format &mdash; spral v2025-03-06 [C] documentation</title>
+  <title>Coordinate (Coord) Format &mdash; spral v2025-05-20 [C] documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
@@ -15,7 +15,7 @@
     <link rel="shortcut icon" href="_static/favicon.ico"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=32e15803"></script>
+      <script src="_static/documentation_options.js?v=647c0742"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -104,6 +104,9 @@
 <p>The arrays should be set such that the <code class="docutils literal notranslate"><span class="pre">k</span></code>-th entry is in row
 <code class="docutils literal notranslate"><span class="pre">row[k]</span></code> and column <code class="docutils literal notranslate"><span class="pre">col[k]</span></code> with value <code class="docutils literal notranslate"><span class="pre">val[k]</span></code>. Entries that are
 zero, including those on the diagonal, need not be specified.</p>
+<p>The row numbers in <cite>row[]</cite> and column numbers in <cite>col[]</cite> are zero-indexed by
+default (<cite>options.array_base=0</cite>), to use one-based indexing set
+<cite>options.array_base=1</cite>.</p>
 <p>For <strong>symmetric matrices</strong>, only the lower <em>or</em> upper triangular entries of
 <span class="math notranslate nohighlight">\(A\)</span> should be supplied. For <strong>unsymmetric matrices</strong>, all entries in the
 matrix should be supplied. Duplicate entries will be summed and out-of-range
@@ -123,8 +126,8 @@ data from Coordinate to CSC format.</p>
 <p>is described by the following data:</p>
 <div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w">    </span><span class="n">n</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
 <span class="kt">int</span><span class="w">    </span><span class="n">ne</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mi">9</span><span class="p">;</span>
-<span class="kt">int</span><span class="w">    </span><span class="n">row</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w"> </span><span class="p">};</span>
-<span class="kt">int</span><span class="w">    </span><span class="n">col</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w"> </span><span class="p">};</span>
+<span class="kt">int</span><span class="w">    </span><span class="n">row</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="w"> </span><span class="p">};</span>
+<span class="kt">int</span><span class="w">    </span><span class="n">col</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="w"> </span><span class="p">};</span>
 <span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">1.1</span><span class="p">,</span><span class="w"> </span><span class="mf">2.2</span><span class="p">,</span><span class="w"> </span><span class="mf">4.4</span><span class="p">,</span><span class="w"> </span><span class="mf">3.3</span><span class="p">,</span><span class="w"> </span><span class="mf">5.5</span><span class="p">,</span><span class="w"> </span><span class="mf">6.6</span><span class="p">,</span><span class="w"> </span><span class="mf">7.7</span><span class="p">,</span><span class="w"> </span><span class="mf">8.8</span><span class="p">,</span><span class="w"> </span><span class="mf">9.9</span><span class="w"> </span><span class="p">};</span>
 </pre></div>
 </div>
