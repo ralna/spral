@@ -1,7 +1,7 @@
 #ifndef SPRAL_H
 #define SPRAL_H
 
-#define SPRAL_VERSION "2025.03.06"
+#define SPRAL_VERSION "2025.05.20"
 
 #include "spral_lsmr.h"
 #include "spral_matrix_util.h"
