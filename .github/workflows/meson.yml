@@ -141,6 +141,7 @@ jobs:
           METIS64="false"
           LIBBLAS="blas32"
           LIBLAPACK="lapack32"
+          OPENMP="true"
           CSTD="c99"
           CPPSTD="c++11"
           LD_CLASSIC=""
@@ -162,6 +163,7 @@ jobs:
             LIBLAPACK="mkl_rt"
           fi
           if [[ "${{matrix.compiler}}" == "nvidia-hpc" ]]; then
+            OPENMP="false"
             CSTD="none"
             CPPSTD="none"
           fi
@@ -183,7 +185,8 @@ jobs:
                                -Dc_std=$CSTD \
                                -Dcpp_std=$CPPSTD \
                                -Dfortran_link_args=${LD_CLASSIC} \
-                               -Dcpp_link_args=${LD_CLASSIC}
+                               -Dcpp_link_args=${LD_CLASSIC} \
+                               -Dopenmp=${OPENMP}
 
       - name: Build SPRAL
         shell: bash
