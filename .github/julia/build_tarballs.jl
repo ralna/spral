@@ -2,13 +2,14 @@ using BinaryBuilder, Pkg
 
 haskey(ENV, "SPRAL_RELEASE") || error("The environment variable SPRAL_RELEASE is not defined.")
 haskey(ENV, "SPRAL_COMMIT") || error("The environment variable SPRAL_COMMIT is not defined.")
+haskey(ENV, "SPRAL_URL") || error("The environment variable SPRAL_URL is not defined.")
 
 name = "SPRAL"
 version = VersionNumber(ENV["SPRAL_RELEASE"])
 
 # Collection of sources required to complete build
 sources = [
-    GitSource("https://github.com/ralna/spral.git", ENV["SPRAL_COMMIT"])
+    GitSource(ENV["SPRAL_URL"], ENV["SPRAL_COMMIT"])
 ]
 
 # Bash recipe for building across all platforms
