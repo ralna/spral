@@ -1,0 +1,33 @@
+name: Moonshot
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test-moonshot:
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['self-hosted']
+        arch: ['x64']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup NVIDIA compilers
+        run: module load nvhpc
+
+      - name: Configure SPRAL
+        run: |
+        rm -rf builddir
+        meson setup builddir --buildtype=debug
+
+      - name: Compile SPRAL
+        run: meson compile -C builddir
+
+      - name: Test SPRAL
+        run: meson test -C builddir
