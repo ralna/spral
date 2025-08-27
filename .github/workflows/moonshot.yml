@@ -21,15 +21,18 @@ jobs:
       - name: Setup NVIDIA compilers
         run: |
           module load nvhpc
+          pip install meson
+          pip install ninja
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
           echo "$(dirname $(which nvcc))" >> $GITHUB_PATH
 
       - name: Configure SPRAL
         run: |
           rm -rf builddir
-          FC=gfortran CC=gcc CXX=g++ /home/amontoison/.local/bin/meson setup builddir --buildtype=debug
+          FC=gfortran CC=gcc CXX=g++ meson setup builddir --buildtype=debug
 
       - name: Compile SPRAL
-        run: /home/amontoison/.local/bin/meson compile -C builddir
+        run: meson compile -C builddir
 
       - name: Test SPRAL
-        run: /home/amontoison/.local/bin/meson test -C builddir
+        run: meson test -C builddir
