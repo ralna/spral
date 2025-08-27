@@ -50,21 +50,6 @@ export OMP_PROC_BIND=TRUE
 ```
 failure to do so will result in SSIDS failing with `Error flag = -53`.
 
-## Generating a shared library
-
-SPRAL must be compiled with `-fPIC` to be able to generate a shared library.
-The static library `libspral.a` can be converted to a shared library using one of the following commands:
-```bash
-# Linux
-gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lgomp -lblas -llapack -lhwloc -lmetis -lstdc++ -o libspral.so
-
-# Windows
-gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lgomp -lopenblas -lhwloc -lmetis -lstdc++ -o libspral.dll
-
-# Mac
-gfortran -fPIC -shared -Wl,-all_load libspral.a -Wl,-noall_load -lgomp -lopenblas -lhwloc -lmetis -lstdc++ -o libspral.dylib
-```
-
 ## Citing SPRAL or SSIDS
 If you write a paper using software from SPRAL, please cite an appropriate paper (a list can usually be found in the method section of the user documentation). To cite SSIDS, please use the following reference:
 
