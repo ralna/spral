@@ -105,6 +105,11 @@ if host_machine.system() == 'linux'
   add_global_arguments('-DHAVE_SCHED_GETCPU', language : 'cpp')
 endif
 
+# HAVE_NVCC
+if build_gpu and nvcc_available and libcuda.found()
+     add_global_arguments('-DHAVE_NVCC', language : 'cpp')
+endif
+
 # OpenMP
 if build_openmp
   if fc.get_id() == 'nvidia_hpc'
