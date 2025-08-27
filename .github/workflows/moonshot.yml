@@ -19,7 +19,9 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Setup NVIDIA compilers
-        run: module load nvhpc
+        run: |
+          module load nvhpc
+          source ~/.bashrc
 
       - name: Configure SPRAL
         run: |
