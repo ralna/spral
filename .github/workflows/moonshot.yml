@@ -25,6 +25,11 @@ jobs:
           pip install ninja
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Set environment variables for OpenMP
+        run: |
+          echo "OMP_CANCELLATION=TRUE" >> $GITHUB_ENV
+          echo "OMP_PROC_BIND=TRUE" >> $GITHUB_ENV
+
       - name: Configure SPRAL
         run: |
           rm -rf builddir
