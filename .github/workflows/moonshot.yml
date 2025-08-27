@@ -23,8 +23,8 @@ jobs:
 
       - name: Configure SPRAL
         run: |
-        rm -rf builddir
-        meson setup builddir --buildtype=debug
+          rm -rf builddir
+          FC=gfortran CC=gcc CXX=g++ meson setup builddir --buildtype=debug
 
       - name: Compile SPRAL
         run: meson compile -C builddir
