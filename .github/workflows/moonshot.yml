@@ -24,7 +24,6 @@ jobs:
           pip install meson
           pip install ninja
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-          echo "$(dirname $(which nvcc))" >> $GITHUB_PATH
 
       - name: Configure SPRAL
         run: |
@@ -33,6 +32,16 @@ jobs:
 
       - name: Compile SPRAL
         run: meson compile -C builddir
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: gpu_meson-log.txt
+          path: builddir/meson-logs/meson-log.txt
 
       - name: Test SPRAL
         run: meson test -C builddir
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: gpu_testlog.txt
+          path: builddir/meson-logs/testlog.txt
