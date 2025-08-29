@@ -95,10 +95,17 @@ public:
          // hwloc_obj_t p = hwloc_cudart_get_device_osdev_by_index(topology_, i);
          hwloc_obj_t p = hwloc_cudart_get_device_pcidev(topology_, i);
          for(; p; p=p->parent) {
+#if HWLOC_API_VERSION >= 0x20000
+            if(p==obj->parent) {
+               gpus.push_back(i);
+               break;
+            }
+#else /* HWLOC_API_VERSION */
             if(p==obj) {
                gpus.push_back(i);
                break;
             }
+#endif /* HWLOC_API_VERSION */
          }
       }
 #endif
