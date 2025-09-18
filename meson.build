@@ -146,20 +146,6 @@ if build_openmp
   add_global_link_arguments(lomp, language : 'cpp')
 endif
 
-# Link flag for C++
-lstdcpp = '-lstdc++'
-if host_machine.system() != 'linux'
-  if cxx.get_id() == 'clang' or cxx.get_id() == 'clang-cl'
-    lstdcpp = '-lc++'
-  endif
-  if cxx.get_id() == 'intel' or cxx.get_id() == 'intel-llvm'
-    lstdcpp = '-cxxlib'
-  endif
-  if cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
-    lstdcpp = '/Qcxxlib'
-  endif
-endif
-
 binspral_src = []
 libspral_src = []
 libspral_c_src = []
@@ -192,8 +178,6 @@ subdir('tests')
 libspral = library('spral',
                    sources : libspral_src + libspral_c_src + libspral_cpp_src + libspral_nvcc_src,
                    dependencies : libspral_deps,
-                   link_language : 'fortran',
-                   link_args : lstdcpp,
                    include_directories: libspral_include,
                    install : true)
 
@@ -202,7 +186,6 @@ executable('spral_ssids',
            sources : binspral_src,
            dependencies : libcuda,
            link_with : libspral,
-           link_language : 'fortran',
            install : true)
 
 # Headers
@@ -225,8 +208,10 @@ if build_tests
     name = test[1]
     file = test[2]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps,
-                    link_language : 'fortran', include_directories: libspral_include),
+         executable(name, file,
+                    link_with : libspral,
+                    dependencies : libspral_deps,
+                    include_directories: libspral_include),
          suite : [package, 'tests', 'fortran'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
@@ -236,8 +221,10 @@ if build_tests
     name = test[1]
     file = test[2]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps,
-                    link_language : 'c', include_directories : libspral_include),
+         executable(name, file,
+                    link_with : libspral,
+                    dependencies : libspral_deps,
+                    include_directories : libspral_include),
          suite : [package, 'tests', 'C'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
@@ -247,8 +234,10 @@ if build_tests
     name = test[1]
     file = test[2]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps,
-                    link_language : 'cpp', include_directories : libspral_include),
+         executable(name, file,
+                    link_with : libspral,
+                    dependencies : libspral_deps,
+                    include_directories : libspral_include),
          suite : [package, 'tests', 'C++'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
@@ -264,9 +253,12 @@ if build_examples
     name = example[1]
     file = example[2]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps,
-                    link_language : 'fortran', include_directories : libspral_include,
-                    install : true, install_dir : fortran_examples_folder),
+         executable(name, file,
+                    link_with : libspral,
+                    dependencies : libspral_deps,
+                    include_directories : libspral_include,
+                    install : true,
+                    install_dir : fortran_examples_folder),
          suite : [package, 'examples', 'fortran'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
@@ -278,9 +270,12 @@ if build_examples
     name = example[1]
     file = example[2]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps,
-                    link_language : 'c', include_directories : libspral_include,
-                    install : true, install_dir : c_examples_folder),
+         executable(name, file,
+                    link_with : libspral,
+                    dependencies : libspral_deps,
+                    include_directories : libspral_include,
+                    install : true,
+                    install_dir : c_examples_folder),
          suite : [package, 'examples', 'C'],
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
