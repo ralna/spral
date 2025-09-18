@@ -144,6 +144,9 @@ if build_openmp
   add_global_link_arguments(lomp, language : 'fortran')
   add_global_link_arguments(lomp, language : 'c')
   add_global_link_arguments(lomp, language : 'cpp')
+  if nvcc_available
+    add_global_link_arguments(lomp, language : 'cuda')
+  endif
 endif
 
 binspral_src = []
