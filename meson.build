@@ -1,7 +1,7 @@
 project(
   'SPRAL',
   'c', 'cpp', 'fortran',
-  version: '2025.05.20',
+  version: '2025.09.18',
   license: 'BSD-3',
   meson_version: '>= 0.63.0',
   default_options: [
