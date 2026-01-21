@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-13]
+        os: [windows-latest, ubuntu-latest, macos-15-intel]
         compiler_version: ['12']
         arch: ['x64']
         metis: [32, 64]
@@ -68,7 +68,7 @@ jobs:
             LIBDIR="lib"
             PLATFORM="x86_64-linux-gnu"
           fi
-          if [[ "${{matrix.os}}" == "macos-13" ]]; then
+          if [[ "${{matrix.os}}" == "macos-15-intel" ]]; then
             DLEXT="dylib"
             LIBDIR="lib"
             PLATFORM="x86_64-apple-darwin"
@@ -150,7 +150,7 @@ jobs:
             LIBBLAS="openblas"
             LIBLAPACK="openblas"
           fi
-          if [[ "${{matrix.os}}" == "macos-13" || "${{matrix.os}}" == "macos-latest" ]]; then
+          if [[ "${{matrix.os}}" == "macos-15-intel" || "${{matrix.os}}" == "macos-latest" ]]; then
             LD_CLASSIC="-Wl,-ld_classic"
           fi
           if [[ "${{matrix.metis}}" == "64" ]]; then
