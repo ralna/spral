@@ -53,7 +53,7 @@ failure to do so will result in SSIDS failing with `Error flag = -53`.
 ## Citing SPRAL or SSIDS
 If you write a paper using software from SPRAL, please cite an appropriate paper (a list can usually be found in the method section of the user documentation). To cite SSIDS, please use the following reference:
 
-> J. Hogg, E. Ovtchinnikov, and J. Scott (2016). A sparse symmetric indefinite direct solver for GPU architectures. ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, [https://dx.doi.org/10.1145/275654](https://doi.org/10.1145/2756548)
+> J. Hogg, E. Ovtchinnikov, and J. Scott (2016). A sparse symmetric indefinite direct solver for GPU architectures. ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, [https://dx.doi.org/10.1145/2756548](https://doi.org/10.1145/2756548)
 
 In BibTeX, the citation is:
 
