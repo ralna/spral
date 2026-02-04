@@ -158,7 +158,7 @@ appropriate paper (a list can usually be found in the method section of
 the user documentation).
 
     J. Hogg, E. Ovtchinnikov, and J. Scott (2016). A sparse symmetric indefinite direct solver for GPU architectures.
-    ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, `<https://dx.doi.org/10.1145/275654>`_
+    ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, `<https://dx.doi.org/10.1145/2756548>`_
 
 If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:
 
