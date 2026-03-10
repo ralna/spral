@@ -48,6 +48,7 @@ install_modules = get_option('modules')
 build_gpu = get_option('gpu')
 build_tests = get_option('tests')
 build_examples = get_option('examples')
+build_binaries = get_option('binaries')
 build_openmp = get_option('openmp')
 
 libblas_name = get_option('libblas')
@@ -190,11 +191,13 @@ libspral = library('spral',
                    install : true)
 
 # Binary
-executable('spral_ssids',
-           sources : binspral_src,
-           dependencies : libcuda,
-           link_with : libspral,
-           install : true)
+if build_binaries
+  executable('spral_ssids',
+             sources : binspral_src,
+             dependencies : libcuda,
+             link_with : libspral,
+             install : true)
+endif
 
 # Headers
 install_headers(spral_headers)
