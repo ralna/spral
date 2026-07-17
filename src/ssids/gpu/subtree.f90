@@ -573,7 +573,7 @@ contains
            this%symbolic%child_list, this%symbolic%n,               &
            this%symbolic%nnodes, this%nodes, this%symbolic%rptr,    &
            this%stream_handle, this%stream_data,                    &
-           x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+           x(r*ldx+1:r*ldx+this%symbolic%n), inform%stat, cuda_error)
       if (inform%stat .ne. 0) goto 100
       if (cuda_error .ne. 0) goto 200
    end do
@@ -610,7 +610,7 @@ contains
    do r = 0, nrhs-1
       call d_solve_gpu(this%symbolic%nnodes, this%symbolic%sptr,    &
            this%stream_handle, this%stream_data, this%symbolic%n,   &
-           x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+           x(r*ldx+1:r*ldx+this%symbolic%n), inform%stat, cuda_error)
       if (inform%stat .ne. 0) goto 100
       if (cuda_error .ne. 0) goto 200
    end do
@@ -646,7 +646,7 @@ contains
    do r = 0, nrhs-1
       call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef,     &
            this%symbolic%n, this%stream_handle, this%stream_data,   &
-           x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+           x(r*ldx+1:r*ldx+this%symbolic%n), inform%stat, cuda_error)
       if (inform%stat .ne. 0) goto 100
       if (cuda_error .ne. 0) goto 200
    end do
@@ -682,7 +682,7 @@ contains
    do r = 0, nrhs-1
       call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef, this%symbolic%n, &
            this%stream_handle, this%stream_data,                            &
-           x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+           x(r*ldx+1:r*ldx+this%symbolic%n), inform%stat, cuda_error)
       if (inform%stat .ne. 0) goto 100
       if (cuda_error .ne. 0) goto 200
    end do
