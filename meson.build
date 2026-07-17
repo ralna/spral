@@ -109,6 +109,16 @@ endif
 # HAVE_NVCC
 if build_gpu and nvcc_available and libcuda.found()
      add_global_arguments('-DHAVE_NVCC', language : 'cpp')
+     # Target GPU architecture. The SSIDS GPU kernels are arch-sensitive and
+     # must be built for the target GPU's native architecture: relying on a
+     # mismatched virtual arch JIT'd at runtime can silently produce wrong
+     # results. Set -Dgpu_arch=sm_XX to match your GPU (e.g. sm_80 A100,
+     # sm_86 A4000/RTX30xx, sm_90 H100, sm_61 GTX10xx; "native" on CUDA>=12).
+     # Empty leaves the nvcc default.
+     gpu_arch = get_option('gpu_arch')
+     if gpu_arch != ''
+       add_global_arguments('-arch=' + gpu_arch, language : 'cuda')
+     endif
 endif
 
 # OpenMP

@@ -227,6 +227,12 @@ void __global__ assemble(
    // Record that we're done
    __syncthreads();
    if(threadIdx.x==0 && threadIdx.y==0) {
+      // Release fence: make this block's dest[] += writes visible to other
+      // blocks BEFORE we advertise completion via sync. Without it a block
+      // spin-waiting on sync (above) can observe completion and read dest
+      // before the writes land, giving non-deterministic wrong results on
+      // Volta+ (cf. the equivalent __threadfence in dtrsv.h's trsv kernels).
+      __threadfence();
       atomicAdd((int*)&(sync[blkdata->cp]), 1);
    }
 }

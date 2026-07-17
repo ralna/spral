@@ -8,6 +8,11 @@ option('gpu',
        value : true,
        description : 'option to compile SPRAL with GPU support')
 
+option('gpu_arch',
+       type : 'string',
+       value : '',
+       description : 'CUDA architecture passed to nvcc via -arch (e.g. sm_80 for A100, sm_86 for A4000/RTX30xx, sm_90 for H100, sm_61 for GTX10xx, or native on CUDA>=12). Empty leaves the nvcc default. The SSIDS GPU kernels are arch-sensitive and should be built for the native architecture of the target GPU.')
+
 option('examples',
        type : 'boolean',
        value : false,

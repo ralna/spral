@@ -30,7 +30,12 @@ module spral_ssids_fkeep
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    type numeric_subtree_ptr
-      class(numeric_subtree_base), pointer :: ptr
+      ! Default-initialise to null: fkeep%subtree is allocated before the
+      ! subtrees are assigned, and the free path tests associated(ptr). Without
+      ! this initialiser an early termination leaves ptr undefined, so
+      ! associated() is UB and deallocate() may crash (mirrors akeep's
+      ! symbolic_subtree_ptr, which already nullifies by default).
+      class(numeric_subtree_base), pointer :: ptr => null()
    end type numeric_subtree_ptr
 
    !
@@ -380,6 +385,8 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
          inform%flag = SSIDS_ERROR_ALLOCATION
          return
       endif
+      po = -1 ! avoid returning garbage for entries enquire_indef leaves unset
+              ! (e.g. singular / missing-diagonal matrices)
    endif
 
    ! FIXME: should probably return nelim from each part, due to delays passing

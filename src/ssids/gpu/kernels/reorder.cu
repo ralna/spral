@@ -331,6 +331,12 @@ copy_L_LD_perm_shmem(
          if ( !indr[i] )
             indr[i] = ++j;
    }
+   // indr is populated above by thread (0,0) only; without this barrier the
+   // other threads race ahead and read stale/uninitialised indr entries (0),
+   // producing indr[tid]-1 == -1 -> out-of-bounds shared write in
+   // shuffle_perm_shmem (device -51 "illegal memory access"), or a wrong
+   // permutation. Only exposed when delayed pivots are present.
+   __syncthreads();
 
    int off = done*ld;
 
