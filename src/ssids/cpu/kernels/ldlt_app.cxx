@@ -29,6 +29,7 @@
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/block_ldlt.hxx"
+#include "ssids/cpu/kernels/block_size.hxx"
 #include "ssids/cpu/kernels/calc_ld.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/kernels/common.hxx"
@@ -38,7 +39,8 @@ namespace spral { namespace ssids { namespace cpu {
 
 namespace ldlt_app_internal {
 
-static const int INNER_BLOCK_SIZE = 32;
+// INNER_BLOCK_SIZE is defined once in block_size.hxx (included above) and shared
+// with the Cholesky kernel; it resolves here via the enclosing namespace.
 
 /** \return number of blocks for given n */
 inline int calc_nblk(int n, int block_size) {
@@ -2503,15 +2505,15 @@ size_t ldlt_app_factor_mem_required(int m, int n, int block_size) {
 }
 
 template<typename T, typename Allocator>
-int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work, Allocator const& alloc) {
-   // If we've got a tall and narrow node, adjust block size so each block
-   // has roughly blksz**2 entries
-   // FIXME: Decide if this reshape is actually useful, given it will generate
-   //        a lot more update tasks instead?
-   int outer_block_size = options.cpu_block_size;
-   /*if(n < outer_block_size) {
-       outer_block_size = int((int64_t(outer_block_size)*outer_block_size) / n);
-   }*/
+int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work, Allocator const& alloc, int nthreads) {
+   // Block size selection. A non-positive cpu_block_size opts into the
+   // front-size-adaptive rule; a positive value is used verbatim (the historic
+   // fixed-block behaviour). nthreads is the size of the OpenMP team assigned to
+   // this subtree (see NumericSubtree), so the ramp adapts to the parallelism
+   // actually available to this front.
+   int outer_block_size = (options.cpu_block_size > 0)
+      ? options.cpu_block_size
+      : adaptive_block_size(m, INNER_BLOCK_SIZE, nthreads);
 
 #ifdef PROFILE
    Profile::setState("TA_MISC1");
@@ -2532,7 +2534,7 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
             outer_block_size, beta, upd, ldupd, work, alloc
             );
 }
-template int ldlt_app_factor<double, BuddyAllocator<double,std::allocator<double>>>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&, std::vector<Workspace>&, BuddyAllocator<double,std::allocator<double>> const& alloc);
+template int ldlt_app_factor<double, BuddyAllocator<double,std::allocator<double>>>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&, std::vector<Workspace>&, BuddyAllocator<double,std::allocator<double>> const& alloc, int nthreads);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
