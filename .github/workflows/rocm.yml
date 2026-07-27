@@ -1,0 +1,55 @@
+name: ROCm
+# Compile-check of the AMD (HIP/ROCm) SSIDS GPU backend. The GitHub runners have
+# no AMD GPU, so this only configures, compiles and links libspral for the AMD
+# backend (hipcc can cross-compile device code for any --offload-arch without a
+# device present). Run-time correctness must be validated separately on hardware.
+on:
+  push:
+    branches:
+      - master
+      - amd-gpu-hip-port
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  build:
+    name: SPRAL/AMD-ROCm/hipcc
+    runs-on: ubuntu-latest
+    container:
+      image: rocm/dev-ubuntu-24.04:latest
+    steps:
+      - name: Check out SPRAL
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            gfortran gcc g++ python3-pip pkg-config \
+            libblas-dev liblapack-dev libmetis-dev libhwloc-dev \
+            hipblas-dev rocblas-dev
+          pip install --break-system-packages meson ninja
+
+      - name: Configure (AMD backend)
+        shell: bash
+        run: |
+          export CC=gcc CXX=g++ FC=gfortran
+          meson setup builddir \
+                --buildtype=debug \
+                -Dgpu=true \
+                -Dgpu_backend=amd \
+                -Drocm_path=/opt/rocm \
+                -Dgpu_arch=gfx90a \
+                -Dtests=false \
+                -Dexamples=false \
+                -Dbinaries=false
+
+      - name: Build (compile + link libspral)
+        shell: bash
+        run: meson compile -C builddir
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rocm_meson-log.txt
+          path: builddir/meson-logs/meson-log.txt

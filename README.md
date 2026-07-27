@@ -43,6 +43,13 @@ meson install -C builddir
 ```
 For more options (including how to specify paths to the above libraries) please see `meson_options.txt`.
 
+GPU support targets NVIDIA by default (`-Dgpu_backend=cuda`, needs `nvcc` + cuBLAS).
+For AMD GPUs use the ROCm backend (needs `hipcc` + hipBLAS):
+```bash
+CC=gcc CXX=g++ FC=gfortran meson setup builddir -Dgpu=true -Dgpu_backend=amd -Dgpu_arch=gfx90a
+```
+The AMD backend builds and links, but on-device numerical validation is still in progress.
+
 When using SSIDS please ensure the following environment variables are set:
 ```bash
 export OMP_CANCELLATION=TRUE

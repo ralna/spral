@@ -34,8 +34,33 @@ In particular, the following options may be of interest:
 * ``-Dlibmetis=metis`` METIS library against which to link.
 * ``-Dlibmetis_version=5`` Version of the METIS library to use.
 * ``-Dmetis64=true`` option to use METIS compiled with 64bit integer support.
+* ``-Dgpu=true`` option to compile SPRAL (SSIDS) with GPU support.
+* ``-Dgpu_backend=cuda`` GPU backend: ``cuda`` (NVIDIA, via nvcc + cuBLAS) or
+  ``amd`` (AMD ROCm, via hipcc + hipBLAS).
+* ``-Dgpu_arch=`` target GPU architecture; passed to ``nvcc -arch`` for CUDA
+  (e.g. ``sm_80``) or ``hipcc --offload-arch`` for AMD (e.g. ``gfx90a``).
+* ``-Drocm_path=/opt/rocm`` root of the ROCm installation (AMD backend only).
 
 For more options (including how to specify paths to the above libraries) please see ``meson_options.txt``.
+
+GPU support
+-----------
+By default SSIDS builds its GPU kernels for NVIDIA GPUs (``-Dgpu_backend=cuda``),
+requiring a CUDA toolkit (``nvcc``) and cuBLAS. To target AMD GPUs instead, use
+the ROCm backend:
+
+.. code-block:: bash
+
+   CC=gcc CXX=g++ FC=gfortran \
+   meson setup builddir -Dgpu=true -Dgpu_backend=amd \
+                        -Drocm_path=/opt/rocm -Dgpu_arch=gfx90a
+   meson compile -C builddir
+
+This requires a ROCm installation providing ``hipcc``, hipBLAS and the HIP
+runtime. The SSIDS GPU kernels are architecture-sensitive, so set ``-Dgpu_arch``
+to your device (e.g. ``gfx90a`` for MI200/MI250, ``gfx942`` for MI300). The AMD
+backend is functional at build level but its on-device numerical validation is
+still in progress.
 
 Building with Autotools:
 ========================
