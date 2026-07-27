@@ -68,9 +68,14 @@ hardware, which was not available here (work so far is configure + compile only)
    `dblkSolve_trans` in `dtrsv.h` shared a `volatile` scalar across lanes
    relying on 32-lane lockstep; they now use explicit `SPRAL_SYNCWARP` barriers
    (correct on AMD wavefronts and NVIDIA Volta+). The fix compiles on both
-   backends but its numerical result must still be verified on hardware, and a
-   broader audit of the other `volatile`-shared patterns in `dtrsv.h`
-   (`slvinv`, `tocache`) is advisable.
+   backends but its numerical result must still be verified on hardware.
+   A full audit of `dtrsv.h` found the rest properly synchronised (`slvinv`,
+   `slvinv_trans`, `tocache`, `transpose`, `nextRow` all use `__syncthreads`),
+   **except `slv21`** (the inner forward-substitution loop, ~L287-294) which has
+   the *same* warp-synchronous `xs` sharing. It is deliberately left unpatched:
+   its threads diverge (per-`y` `continue`, early `return`), so a wrong
+   `__syncwarp` mask would deadlock — it needs a careful rework validated on
+   hardware, not a blind barrier.
 3. **Inter-block synchronisation (unresolved).** The batched trsv and the
    assembly kernels use spin-locks (`while(sync[...] < ...)`) with
    `__threadfence*` + `atomicAdd`. This assumes all blocks are co-resident
