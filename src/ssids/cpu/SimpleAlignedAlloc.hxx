@@ -43,7 +43,10 @@ public:
       void *ptr = reinterpret_cast<void*>(
             reinterpret_cast<char*>(mem) + sizeof(void*)
             );
-      if(!std::align(align, n*sizeof(T), ptr, size)) throw std::bad_alloc();
+      if(!std::align(align, n*sizeof(T), ptr, size)) {
+         free(mem); // don't leak the malloc'd block on the (padded) throw path
+         throw std::bad_alloc();
+      }
       // store base address to left of returned pointer
       void **vptr = reinterpret_cast<void**>(ptr) - 1;
       *vptr = mem;

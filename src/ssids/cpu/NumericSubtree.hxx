@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <memory>
 #include <type_traits>
 
 #include "ssids/profile.hxx"
@@ -64,6 +65,10 @@ public:
      pool_alloc_(symbolic_subtree.get_pool_size<T>()),
      small_leafs_(static_cast<SLNS*>(::operator new[](symb_.small_leafs_.size()*sizeof(SLNS))))
    {
+    // If the body throws (e.g. bad_alloc from a vector), ~NumericSubtree does
+    // not run, so free the raw small_leafs_ storage on the way out. (A ctor
+    // function-try-block can't be used: its handler may not touch members.)
+    try {
       /* Associate symbolic nodes to numeric ones; copy tree structure */
       nodes_.reserve(symbolic_subtree.nnodes_+1);
       for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
@@ -280,6 +285,10 @@ public:
             }
          }
       }
+    } catch(...) {
+      ::operator delete[](small_leafs_);
+      throw;
+    }
    }
    ~NumericSubtree() {
       // small_leafs_ is raw storage from ::operator new[]; elements are created
@@ -295,9 +304,12 @@ public:
    }
 
    void solve_fwd(int nrhs, double* x, int ldx) const {
-      /* Allocate memory */
-      double* xlocal = new double[nrhs*symb_.n];
-      int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
+      /* Allocate memory (RAII: no leak if the second allocation throws) */
+      std::unique_ptr<double[]> xlocal_owner(new double[nrhs*symb_.n]);
+      double* xlocal = xlocal_owner.get();
+      std::unique_ptr<int[]> map_owner(
+         (!posdef) ? new int[symb_.n] : nullptr); // only indef
+      int* map_alloc = map_owner.get();
 
       /* Main loop */
       for(int ni=0; ni<symb_.nnodes_; ++ni) {
@@ -344,19 +356,20 @@ public:
             x[r*ldx + map[i]-1] = xlocal[r*symb_.n+i];
       }
 
-      /* Cleanup memory */
-      if(!posdef) delete[] map_alloc; // only used in indef case
-      delete[] xlocal;
+      /* Memory released automatically by xlocal_owner / map_owner */
    }
 
    template <bool do_diag, bool do_bwd>
    void solve_diag_bwd_inner(int nrhs, double* x, int ldx) const {
       if(posdef && !do_bwd) return; // diagonal solve is a no-op for posdef
 
-      /* Allocate memory - map only needed for indef bwd/diag_bwd solve */
-      double* xlocal = new double[nrhs*symb_.n];
-      int* map_alloc = (!posdef && do_bwd) ? new int[symb_.n]
-                                           : nullptr;
+      /* Allocate memory - map only needed for indef bwd/diag_bwd solve.
+       * RAII: no leak if the second allocation throws. */
+      std::unique_ptr<double[]> xlocal_owner(new double[nrhs*symb_.n]);
+      double* xlocal = xlocal_owner.get();
+      std::unique_ptr<int[]> map_owner(
+         (!posdef && do_bwd) ? new int[symb_.n] : nullptr);
+      int* map_alloc = map_owner.get();
 
       /* Perform solve */
       for(int ni=symb_.nnodes_-1; ni>=0; --ni) {
@@ -411,9 +424,7 @@ public:
             x[r*ldx + map[i]-1] = xlocal[r*symb_.n+i];
       }
 
-      /* Cleanup memory */
-      if(!posdef && do_bwd) delete[] map_alloc; // only used in indef case
-      delete[] xlocal;
+      /* Memory released automatically by xlocal_owner / map_owner */
    }
 
    void solve_diag(int nrhs, double* x, int ldx) const {

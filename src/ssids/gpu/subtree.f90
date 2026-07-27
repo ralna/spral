@@ -498,8 +498,8 @@ contains
       if (flag .ne. 0) return
    end if
    if (C_ASSOCIATED(this%gpu_clists_direct)) then
-      flag = cudaFree(this%gpu_clists)
-      this%gpu_clists = C_NULL_PTR
+      flag = cudaFree(this%gpu_clists_direct)
+      this%gpu_clists_direct = C_NULL_PTR
       if (flag .ne. 0) return
    end if
    if (C_ASSOCIATED(this%gpu_clen)) then
