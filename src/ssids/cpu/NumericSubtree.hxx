@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <type_traits>
+
 #include "ssids/profile.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/factor.hxx"
@@ -280,7 +282,16 @@ public:
       }
    }
    ~NumericSubtree() {
-      delete[] small_leafs_;
+      // small_leafs_ is raw storage from ::operator new[]; elements are created
+      // with placement new. SLNS is trivially destructible so no per-element
+      // ~SLNS() loop is needed (and some slots may be unconstructed on abort);
+      // release the raw storage with the matching ::operator delete[]. The
+      // static_assert forces a real destroy-loop here if SLNS ever gains a
+      // non-trivial destructor.
+      static_assert(std::is_trivially_destructible<SLNS>::value,
+         "SmallLeafNumericSubtree is no longer trivially destructible: "
+         "~NumericSubtree must destroy the constructed small_leafs_ elements");
+      ::operator delete[](small_leafs_);
    }
 
    void solve_fwd(int nrhs, double* x, int ldx) const {
