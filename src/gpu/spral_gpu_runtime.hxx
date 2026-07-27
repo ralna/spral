@@ -121,3 +121,15 @@ using cublasOperation_t = hipblasOperation_t;
 #include <cublas_v2.h>
 
 #endif
+
+/* Per-backend kernel launch bounds. NVIDIA honours the
+ * (maxThreads, minBlocksPerSM) occupancy hint, tuned for its SMs. On AMD that
+ * second term maps to waves-per-EU and the NVIDIA-tuned values misfire (the
+ * ROCm compiler warns it cannot meet them), so drop the min-blocks term and
+ * let the compiler choose occupancy. Re-tuning per AMD arch is future work. */
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIP__) || defined(SPRAL_USE_HIP)
+#define SPRAL_LAUNCH_BOUNDS(maxThreads, minBlocks) __launch_bounds__(maxThreads)
+#else
+#define SPRAL_LAUNCH_BOUNDS(maxThreads, minBlocks) \
+   __launch_bounds__(maxThreads, minBlocks)
+#endif

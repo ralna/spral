@@ -63,7 +63,7 @@ struct gemv_transpose_lookup {
  * Requires threadsy to exactly divide maxn.
  */
 template <int threadsx, int threadsy, int maxm, int maxn>
-__launch_bounds__(threadsx*threadsy, 6)
+SPRAL_LAUNCH_BOUNDS(threadsx*threadsy, 6)
 void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
       double *x, double *y
       ) {

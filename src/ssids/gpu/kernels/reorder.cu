@@ -713,9 +713,9 @@ struct multireorder_data {
 
 template< typename ELEMENT_TYPE, unsigned int SIZE_X, unsigned int SIZE_Y >
 #if (SM_3X)
-__launch_bounds__(256, 8)
+SPRAL_LAUNCH_BOUNDS(256, 8)
 #else
-__launch_bounds__(256, 4)
+SPRAL_LAUNCH_BOUNDS(256, 4)
 #endif
 __global__ void
 cu_multireorder(

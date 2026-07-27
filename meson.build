@@ -149,6 +149,16 @@ if build_gpu_amd
   if hip_arch != ''
     hipcc_command += '--offload-arch=' + hip_arch
   endif
+
+  # Host C++ (hw_topology) uses the HIP host API to enumerate AMD GPUs.
+  add_global_arguments('-DHAVE_HIP', language : 'cpp')
+  add_global_arguments('-D__HIP_PLATFORM_AMD__', language : 'cpp')
+  add_global_arguments('-I' + rocm_inc, language : 'cpp')
+  # Precise GPU<->NUMA affinity needs hwloc built with the ROCm SMI backend.
+  if libhwloc.found() and has_hwloch and \
+     cc.has_header('hwloc/rsmi.h', args : ['-I' + rocm_inc])
+    add_global_arguments('-DHAVE_HWLOC_RSMI', language : 'cpp')
+  endif
 endif
 
 # OpenMP

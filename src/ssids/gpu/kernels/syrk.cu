@@ -180,7 +180,7 @@ struct multisyrk_type {
 
 template< typename ELEMENT_TYPE >
 #if SM_3X
-__launch_bounds__(64, 14)
+SPRAL_LAUNCH_BOUNDS(64, 14)
 #endif
 __global__ void
 cu_multisyrk_lc_r4x4(

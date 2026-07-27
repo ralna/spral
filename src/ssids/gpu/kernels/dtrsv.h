@@ -472,7 +472,7 @@ struct trsv_times {
  */
 template <typename T_ELEM, unsigned int nb, unsigned int threadsx, unsigned int threadsy, bool ISUNIT>
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-__launch_bounds__(threadsx*threadsy, 4)
+SPRAL_LAUNCH_BOUNDS(threadsx*threadsy, 4)
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal, int *sync
 #ifdef TIMING
@@ -686,7 +686,7 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal, 
  */
 template <typename T_ELEM, unsigned int nb, unsigned int threadsx, unsigned int threadsy, bool ISUNIT>
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-__launch_bounds__(threadsx*threadsy, 4)
+SPRAL_LAUNCH_BOUNDS(threadsx*threadsy, 4)
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 /* Note: setting above occupany to 5 causes random errors on large problems:
    suspect compiler bug */

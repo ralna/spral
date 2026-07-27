@@ -22,6 +22,11 @@
 #include <hwloc/cudart.h>
 #endif /* HAVE_NVCC */
 
+#ifdef HAVE_HWLOC_RSMI
+#include <hip/hip_runtime_api.h>
+#include <hwloc/rsmi.h> /* hwloc built with ROCm SMI support */
+#endif /* HAVE_HWLOC_RSMI */
+
 namespace spral { namespace hw_topology {
 
 /**
@@ -37,6 +42,9 @@ public:
    /** \brief Constructor */
    HwlocTopology() {
       hwloc_topology_init(&topology_);
+      // IO device discovery is only needed to locate GPUs in the topology tree
+      // (see get_gpus), so only enable it when a GPU backend is compiled in.
+#if defined(HAVE_NVCC) || defined(HAVE_HWLOC_RSMI)
 #if HWLOC_API_VERSION >= 0x20000
       hwloc_topology_set_type_filter(topology_, HWLOC_OBJ_OS_DEVICE,
             HWLOC_TYPE_FILTER_KEEP_IMPORTANT);
@@ -45,6 +53,7 @@ public:
 #else /* HWLOC_API_VERSION */
       hwloc_topology_set_flags(topology_, HWLOC_TOPOLOGY_FLAG_IO_DEVICES);
 #endif /* HWLOC_API_VERSION */
+#endif /* HAVE_NVCC || HAVE_HWLOC_RSMI */
       hwloc_topology_load(topology_);
    }
    /** \brief Destructor */
@@ -108,8 +117,30 @@ public:
 #endif /* HWLOC_API_VERSION */
          }
       }
-#endif
-      return gpus; // will be empty ifndef HAVE_NVCC
+#endif /* HAVE_NVCC */
+#ifdef HAVE_HWLOC_RSMI
+      /* AMD equivalent, when hwloc is built with ROCm SMI support. */
+      int ngpu;
+      if(hipGetDeviceCount(&ngpu) != hipSuccess)
+         return gpus; // empty
+      for(int i=0; i<ngpu; ++i) {
+         hwloc_obj_t p = hwloc_rsmi_get_device_osdev_by_index(topology_, i);
+         for(; p; p=p->parent) {
+#if HWLOC_API_VERSION >= 0x20000
+            if(p==obj->parent) {
+               gpus.push_back(i);
+               break;
+            }
+#else /* HWLOC_API_VERSION */
+            if(p==obj) {
+               gpus.push_back(i);
+               break;
+            }
+#endif /* HWLOC_API_VERSION */
+         }
+      }
+#endif /* HAVE_HWLOC_RSMI */
+      return gpus; // empty unless a GPU backend is compiled in
    }
 
 private:

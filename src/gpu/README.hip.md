@@ -46,8 +46,19 @@ The meson wiring (`meson.build`, `meson_options.txt`, and the `src/**/meson.buil
 gates) detects `hipcc`, finds `amdhip64`/`hipblas` under `rocm_path`, compiles the
 `.cu` + shim with `hipcc` (each via a `custom_target`, `--offload-arch=<gpu_arch>`)
 and links the objects into `libspral`. The NVIDIA path is unchanged and selected
-with `-Dgpu_backend=cuda` (the default). Verified: `meson setup` + `ninja`
-produce gfx906 device objects for all six kernels + the shim on ROCm 7.2.
+with `-Dgpu_backend=cuda` (the default). GPU discovery for the hardware topology
+uses `hipGetDeviceCount` (see `src/hw_topology`); precise GPU<->NUMA affinity is
+used when hwloc is built with the ROCm SMI backend (`HAVE_HWLOC_RSMI`), otherwise
+all visible GPUs are attached to the first NUMA region.
+
+Verified here (ROCm 7.2, gfx906): `meson setup -Dgpu_backend=amd` + `ninja`
+compile all six kernels + the shim to device objects **and link the full
+`libspral.so`** end-to-end (host compilers gcc/gfortran).
+
+> **Build tip.** Use gcc/gfortran as the host compilers (`CC=gcc CXX=g++
+> FC=gfortran`). With ROCm's clang as the host C++ compiler, OpenMP linking
+> currently fails (`__kmpc_*` undefined) because meson links `-lgomp`; that is a
+> pre-existing clang-on-Linux OpenMP quirk, not specific to the AMD backend.
 
 **Not yet done / not yet validated** — everything below needs actual AMD
 hardware, which was not available here (work so far is configure + compile only):
@@ -63,8 +74,9 @@ hardware, which was not available here (work so far is configure + compile only)
    CUDA's; the busy-wait sync must be validated on-device.
 4. **hipBLAS semantics.** `spral_cublasDgemm` passes `alpha`/`beta` as host
    pointers — verify hipBLAS pointer-mode default matches.
-5. **`__launch_bounds__` tuning.** Occupancy hints (e.g. `(64,14)`, `(256,8)`)
-   were tuned for NVIDIA; re-tune for the target AMD arch.
+5. **`__launch_bounds__` re-tuning.** The per-backend `SPRAL_LAUNCH_BOUNDS` macro
+   now drops the NVIDIA-tuned min-blocks hint on AMD (so the compiler picks
+   occupancy); tuning proper AMD values needs profiling on the target arch.
 6. **`cudaDeviceSetSharedMemConfig`** is a no-op on AMD (LDS has no configurable
    bank width) — harmless, but confirm no perf assumption depends on it.
 

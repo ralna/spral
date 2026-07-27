@@ -18,6 +18,9 @@
 #ifdef HAVE_NVCC
 #include <cuda_runtime_api.h>
 #endif /* HAVE_NVCC */
+#ifdef HAVE_HIP
+#include <hip/hip_runtime_api.h>
+#endif /* HAVE_HIP */
 
 #include "compat.hxx"
 #include "hw_topology/hwloc_wrapper.hxx"
@@ -55,13 +58,34 @@ void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
       for(int i=0; i<region.ngpu; ++i)
          region.gpus[i] = gpus[i];
    }
+#if defined(HAVE_HIP) && !defined(HAVE_HWLOC_RSMI)
+   // hwloc here has no ROCm/RSMI backend, so it cannot map AMD GPUs to NUMA
+   // nodes and the get_gpus() above returned nothing. Fall back to attaching
+   // all visible GPUs to the first region so the solver still sees them
+   // (coarse: no GPU-NUMA affinity). With hwloc built against ROCm SMI,
+   // HAVE_HWLOC_RSMI is set and the precise per-node mapping is used instead.
+   {
+      int total_gpus = 0;
+      for(int i=0; i<*nregions; ++i) total_gpus += (*regions)[i].ngpu;
+      if(total_gpus == 0) {
+         int ngpu = 0;
+         if(hipGetDeviceCount(&ngpu) != hipSuccess) ngpu = 0;
+         if(ngpu > 0) {
+            NumaRegion& region = (*regions)[0];
+            region.ngpu = ngpu;
+            region.gpus = new int[ngpu];
+            for(int i=0; i<ngpu; ++i) region.gpus[i] = i;
+         }
+      }
+   }
+#endif /* HAVE_HIP && !HAVE_HWLOC_RSMI */
 #else /* HAVE_HWLOC */
    // Compiled without hwloc support, just put everything in one region
    *nregions = 1;
    *regions = new NumaRegion[*nregions];
    NumaRegion& region = (*regions)[0];
    region.nproc = omp_get_max_threads();
-#if HAVE_NVCC
+#if defined(HAVE_NVCC)
    cudaError_t cuda_error = cudaGetDeviceCount(&region.ngpu);
    if(cuda_error != 0) {
       printf("CUDA Failed, working without GPU\n");
@@ -70,10 +94,19 @@ void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
    region.gpus = (region.ngpu > 0) ? new int[region.ngpu] : nullptr;
    for(int i=0; i<region.ngpu; ++i)
       region.gpus[i] = i;
-#else /* HAVE_NVCC */
+#elif defined(HAVE_HIP)
+   hipError_t hip_error = hipGetDeviceCount(&region.ngpu);
+   if(hip_error != hipSuccess) {
+      printf("HIP Failed, working without GPU\n");
+      region.ngpu = 0;
+   }
+   region.gpus = (region.ngpu > 0) ? new int[region.ngpu] : nullptr;
+   for(int i=0; i<region.ngpu; ++i)
+      region.gpus[i] = i;
+#else
    region.ngpu = 0;
    region.gpus = nullptr;
-#endif /* HAVE_NVCC */
+#endif
 #endif /* HAVE_HWLOC */
 }
 
