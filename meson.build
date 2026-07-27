@@ -46,6 +46,8 @@ endif
 # Options
 install_modules = get_option('modules')
 build_gpu = get_option('gpu')
+gpu_backend = get_option('gpu_backend')
+rocm_path = get_option('rocm_path')
 build_tests = get_option('tests')
 build_examples = get_option('examples')
 build_binaries = get_option('binaries')
@@ -86,6 +88,15 @@ libcuda = dependency('cuda', version : '>=10', modules : ['cublas'], required : 
 lm = cc.find_library('m', required : false)
 libspral_deps = [libblas, liblapack, libmetis, libhwloc, libcuda, lm]
 
+# GPU backend resolution.
+#   build_gpu_cuda : NVIDIA path (nvcc + cuBLAS), meson 'cuda' language.
+#   build_gpu_amd  : AMD ROCm path (hipcc + hipBLAS), .cu compiled via hipcc.
+#   build_gpu_dev  : either device backend is active (Fortran GPU sources on).
+hipcc = find_program('hipcc', required : false)
+build_gpu_cuda = build_gpu and gpu_backend == 'cuda' and nvcc_available and libcuda.found()
+build_gpu_amd  = build_gpu and gpu_backend == 'amd' and hipcc.found()
+build_gpu_dev  = build_gpu_cuda or build_gpu_amd
+
 # CBLAS
 has_cblash = cc.has_header('cblas.h', include_directories : libblas_include)
 
@@ -106,8 +117,8 @@ if host_machine.system() == 'linux'
   add_global_arguments('-DHAVE_SCHED_GETCPU', language : 'cpp')
 endif
 
-# HAVE_NVCC
-if build_gpu and nvcc_available and libcuda.found()
+# HAVE_NVCC (NVIDIA backend)
+if build_gpu_cuda
      add_global_arguments('-DHAVE_NVCC', language : 'cpp')
      # Target GPU architecture. The SSIDS GPU kernels are arch-sensitive and
      # must be built for the target GPU's native architecture: relying on a
@@ -119,6 +130,25 @@ if build_gpu and nvcc_available and libcuda.found()
      if gpu_arch != ''
        add_global_arguments('-arch=' + gpu_arch, language : 'cuda')
      endif
+endif
+
+# AMD ROCm backend: locate HIP/hipBLAS and assemble the hipcc command used to
+# compile the .cu / shim sources into objects (see below, after subdir()).
+if build_gpu_amd
+  rocm_inc = rocm_path / 'include'
+  rocm_lib = rocm_path / 'lib'
+  hip_dep     = cc.find_library('amdhip64', dirs : [rocm_lib], required : true)
+  hipblas_dep = cc.find_library('hipblas',  dirs : [rocm_lib], required : true)
+  libspral_deps += [hip_dep, hipblas_dep]
+
+  hipcc_command = [hipcc, '-c', '-fPIC', '-O3', '-std=c++11', '-DSPRAL_USE_HIP',
+                   '-I' + meson.project_source_root() / 'src',
+                   '-I' + meson.project_source_root() / 'include',
+                   '-I' + rocm_inc]
+  hip_arch = get_option('gpu_arch')
+  if hip_arch != ''
+    hipcc_command += '--offload-arch=' + hip_arch
+  endif
 endif
 
 # OpenMP
@@ -170,6 +200,7 @@ libspral_src = []
 libspral_c_src = []
 libspral_cpp_src = []
 libspral_nvcc_src = []
+libspral_hip_src = []      # .cu / .cxx sources compiled by hipcc (AMD backend)
 
 spral_examples = []
 spral_c_examples = []
@@ -193,9 +224,24 @@ subdir('driver')
 subdir('examples')
 subdir('tests')
 
+# AMD backend: compile each HIP source into an object with hipcc. HIP does not
+# need a separate device-link step (no -fgpu-rdc), so the resulting objects link
+# directly into the shared library with the host linker.
+libspral_hip_objects = []
+if build_gpu_amd
+  fs = import('fs')
+  foreach hipfile : libspral_hip_src
+    libspral_hip_objects += custom_target(
+      'hipobj_' + fs.name(hipfile),
+      input : hipfile,
+      output : fs.name(hipfile) + '.o',
+      command : hipcc_command + ['@INPUT@', '-o', '@OUTPUT@'])
+  endforeach
+endif
+
 # Library
 libspral = library('spral',
-                   sources : libspral_src + libspral_c_src + libspral_cpp_src + libspral_nvcc_src,
+                   sources : libspral_src + libspral_c_src + libspral_cpp_src + libspral_nvcc_src + libspral_hip_objects,
                    dependencies : libspral_deps,
                    include_directories: libspral_include,
                    install : true)

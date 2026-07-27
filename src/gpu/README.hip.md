@@ -34,13 +34,25 @@ hipcc -x hip -c <file> -Isrc  nvcc -c <file> -Isrc
 - `src/ssids/gpu/kernels/reorder.cu`      ✅ ✅
 - `src/ssids/gpu/kernels/dense_factor.cu` ✅ ✅
 
-**Not yet done / not yet validated** — this is compile-level only, no GPU was
-available to run on:
+## Building for AMD
 
-1. **Meson wiring.** Add `hipcc`/ROCm detection and a `gpu=amd` option; compile
-   the `.cu` with `hipcc`; build+link `cuda_hip_shim.cxx`; link
-   `hipblas` + `amdhip64` instead of `cudart`+`cublas`. Nothing here is wired
-   into the build yet.
+```sh
+meson setup build -Dgpu=true -Dgpu_backend=amd \
+      -Drocm_path=/opt/rocm -Dgpu_arch=gfx90a   # gfx942 MI300, gfx906 ...
+ninja -C build
+```
+
+The meson wiring (`meson.build`, `meson_options.txt`, and the `src/**/meson.build`
+gates) detects `hipcc`, finds `amdhip64`/`hipblas` under `rocm_path`, compiles the
+`.cu` + shim with `hipcc` (each via a `custom_target`, `--offload-arch=<gpu_arch>`)
+and links the objects into `libspral`. The NVIDIA path is unchanged and selected
+with `-Dgpu_backend=cuda` (the default). Verified: `meson setup` + `ninja`
+produce gfx906 device objects for all six kernels + the shim on ROCm 7.2.
+
+**Not yet done / not yet validated** — everything below needs actual AMD
+hardware, which was not available here (work so far is configure + compile only):
+
+1. **Run-time correctness.** No SSIDS factorise/solve has been executed on a GPU.
 2. **Warp size 32 vs 64 (correctness risk).** `dtrsv.h` fixes
    `TRSV_NB_TASK = 32` "= warpSize" and does warp-synchronous work. On AMD a
    wavefront is 64 lanes; a 32-thread block is half a wavefront. This *may* be

@@ -8,10 +8,21 @@ option('gpu',
        value : true,
        description : 'option to compile SPRAL with GPU support')
 
+option('gpu_backend',
+       type : 'combo',
+       choices : ['cuda', 'amd'],
+       value : 'cuda',
+       description : 'GPU backend for SSIDS: "cuda" (NVIDIA, via nvcc + cuBLAS) or "amd" (AMD ROCm, via hipcc + hipBLAS). Only used when gpu=true.')
+
 option('gpu_arch',
        type : 'string',
        value : '',
-       description : 'CUDA architecture passed to nvcc via -arch (e.g. sm_80 for A100, sm_86 for A4000/RTX30xx, sm_90 for H100, sm_61 for GTX10xx, or native on CUDA>=12). Empty leaves the nvcc default. The SSIDS GPU kernels are arch-sensitive and should be built for the native architecture of the target GPU.')
+       description : 'Target GPU architecture. For gpu_backend=cuda it is passed to nvcc via -arch (e.g. sm_80 A100, sm_86 A4000/RTX30xx, sm_90 H100, sm_61 GTX10xx, or native on CUDA>=12). For gpu_backend=amd it is passed to hipcc via --offload-arch (e.g. gfx90a MI200, gfx942 MI300, gfx1100 RX7900). Empty leaves the compiler default. The SSIDS GPU kernels are arch-sensitive and should be built for the native architecture of the target GPU.')
+
+option('rocm_path',
+       type : 'string',
+       value : '/opt/rocm',
+       description : 'Root of the ROCm installation (used when gpu_backend=amd to find hipcc, the HIP/hipBLAS headers and libraries).')
 
 option('examples',
        type : 'boolean',

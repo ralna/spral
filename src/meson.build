@@ -1,4 +1,5 @@
 subdir('cuda')
+subdir('gpu')
 subdir('hw_topology')
 subdir('ssids')
 subdir('ssmfe')
