@@ -231,19 +231,19 @@ subroutine spral_ssmfe_generalized_double_complex(crci, left, mep, lambda, n, &
   use spral_ssmfe_ciface
   implicit none
 
-  type(spral_ssmfe_rcid), intent(inout) :: crci
+  type(spral_ssmfe_rciz), intent(inout) :: crci
   integer(C_INT), value :: left
   integer(C_INT), value :: mep
   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
   integer(C_INT), value :: n
   integer(C_INT), value :: ldx
-  real(C_DOUBLE), dimension(ldx, mep), intent(inout) :: x
+  complex(C_DOUBLE_COMPLEX), dimension(ldx, mep), intent(inout) :: x
   type(C_PTR), intent(inout) :: ckeep
   type(spral_ssmfe_options), intent(in) :: coptions
   type(spral_ssmfe_inform), intent(inout) :: cinform
 
   logical :: cindexed
-  type(ssmfe_ciface_keepd), pointer :: fcikeep
+  type(ssmfe_ciface_keepz), pointer :: fcikeep
   type(ssmfe_options) :: foptions
 
   ! Copy options in first to find out whether we use Fortran or C indexing

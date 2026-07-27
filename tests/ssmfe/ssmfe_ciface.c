@@ -1140,7 +1140,7 @@ int test_ssmfe_d(int problem) {
             &keep, &options, &inform );
          break;
       case 1:
-         spral_ssmfe_standard_double( &rci, nep, 2*nep, lambda, n, &(*X)[0][0], n,
+         spral_ssmfe_generalized_double( &rci, nep, 2*nep, lambda, n, &(*X)[0][0], n,
             &keep, &options, &inform );
          break;
       case 2:
@@ -1267,7 +1267,7 @@ int test_ssmfe_z(int problem) {
             &keep, &options, &inform );
          break;
       case 1:
-         spral_ssmfe_standard_double_complex(
+         spral_ssmfe_generalized_double_complex(
             &rci, nep, 2*nep, lambda, n, &(*X)[0][0], n,
             &keep, &options, &inform );
          break;
