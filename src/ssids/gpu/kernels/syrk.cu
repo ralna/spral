@@ -18,14 +18,25 @@
 #include "ssids/gpu/kernels/datatypes.h"
 #include "cuda/cuda_check.h"
 
+#ifndef min
 #define min(x,y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef max
 #define max(x,y) ((x) > (y) ? (x) : (y))
+#endif
 
 #define MAX_CUDA_BLOCKS 65535
 
 //#define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350 || __CUDA_ARCH__ == 370)
 //FIXME: Verify if the code for Keplers (sm_3x) is still correct for the later GPUs.
+#if defined(__HIP__) || defined(SPRAL_USE_HIP)
+// AMD/HIP: __CUDA_ARCH__ is undefined, so select a path explicitly instead of
+// relying on the macro silently evaluating to 0. Use the non-double2 path,
+// whose shared-memory bounds have been reviewed for correctness.
+#define SM_3X 0
+#else
 #define SM_3X (__CUDA_ARCH__ >= 300)
+#endif
 
 using namespace spral::ssids::gpu;
 
@@ -37,7 +48,7 @@ template< int WIDTH >
 inline __device__ void
 loadDevToSmem_generic( volatile double *const __restrict__ as, volatile double *const __restrict__ bs,
                const double* __restrict__ a, const double* __restrict__ b,
-               int bx, int by, int offa, int lda, int ldb,
+               int bx, int by, int64_t offa, int lda, int ldb,
                int n, int i, int k)
 {
   switch (WIDTH) {
@@ -179,9 +190,7 @@ struct multisyrk_type {
 // (stored columnwise) using 8x8 cuda blocks
 
 template< typename ELEMENT_TYPE >
-#if SM_3X
 SPRAL_LAUNCH_BOUNDS(64, 14)
-#endif
 __global__ void
 cu_multisyrk_lc_r4x4(
   const struct multisyrk_type* msdata, int off, ELEMENT_TYPE* c
@@ -218,7 +227,7 @@ cu_multisyrk_lc_r4x4(
   int first = msdata->first;
   const ELEMENT_TYPE * __restrict__ a = msdata->lval;
   const ELEMENT_TYPE * __restrict__ b = msdata->ldval;
-  int offc  = msdata->offc;
+  int64_t offc = msdata->offc; // int64: matches struct field, avoids overflow
   int n     = msdata->n;
   int k     = msdata->k;
   int lda   = msdata->lda;
@@ -410,7 +419,7 @@ cu_multisyrk_r4x4(
 ){
   int bx, by;
   int n, m, k;
-  int offa, offc;
+  int64_t offa, offc; // int64: node offsets into lval can exceed 2^31
   int lda, ldb;
   int nb;
   ELEMENT_TYPE s[16];
@@ -451,8 +460,8 @@ cu_multisyrk_r4x4(
   const double * __restrict__ b = posdef ? ndatat->lval : ndatat->ldval;
   double * __restrict__ c = ndatat->lval;
 
-  offa = by + lda*n;
-  offc = by + by*n;
+  offa = by + (int64_t)lda*n;
+  offc = by + (int64_t)by*n;
   lda = n;
   ldb = n;
   m -= by;

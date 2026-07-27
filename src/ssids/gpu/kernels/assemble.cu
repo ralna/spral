@@ -53,7 +53,7 @@ cu_load_nodes(
    nlist += 2*lndata->offn;
    double *const lval = lndata->lcol;
 
-   for (int i = threadIdx.x; i < nnz; i += blockDim.x) {
+   for (int64_t i = threadIdx.x; i < nnz; i += blockDim.x) {
      // Note: nlist is 1-indexed, not 0 indexed, so we have to adjust
      const int r = (nlist[2*i+1] - 1) % lda; // row index
      const int c = (nlist[2*i+1] - 1) / lda; // col index
@@ -79,7 +79,7 @@ cu_load_nodes_sc(
     const double *aval
 ) {
    lndata += blockIdx.x;
-   const int nnz = lndata->nnz;
+   const int64_t nnz = lndata->nnz; // int64: matches struct field and cu_load_nodes
    const int lda = lndata->lda;
    const int ldl = lndata->ldl;
 
@@ -87,7 +87,7 @@ cu_load_nodes_sc(
    double *const lval = lndata->lcol;
    rlist += lndata->offr;
 
-   for (int i = threadIdx.x; i < nnz; i += blockDim.x) {
+   for (int64_t i = threadIdx.x; i < nnz; i += blockDim.x) {
       // Note: nlist and rlist are 1-indexed, not 0 indexed, so we adjust
       const int r = (nlist[2*i+1] - 1) % lda; // row index
       const int c = (nlist[2*i+1] - 1) / lda; // col index

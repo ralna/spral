@@ -76,14 +76,24 @@ void __device__ dblkSolve(const volatile T_ELEM *const minus_a, const int lda, T
 {
    volatile T_ELEM __shared__ xs;
 
+   // Barrier mask over the blkSize active lanes (threadIdx.y==0). The write of
+   // xs by lane i must be visible to the reading lanes >i before they use it,
+   // and the read must finish before lane i+1 overwrites xs next iteration.
+   // Relying on implicit warp lockstep is unsafe on AMD wavefronts and on
+   // NVIDIA Volta+; __syncwarp makes the ordering explicit.
+   const unsigned long long lanemask =
+      (blkSize >= 64) ? ~0ull : ((1ull << blkSize) - 1ull);
+
 #pragma unroll 16
    for (int i=0; i<blkSize; ++i) {
      if (threadIdx.x==i) {
        if (!ISUNIT) val *= minus_a[i*lda+i];
        xs = val;
      }
+     SPRAL_SYNCWARP(lanemask);
      if (threadIdx.x > i)
        val += minus_a[i*lda+threadIdx.x] * xs;
+     SPRAL_SYNCWARP(lanemask);
    }
 }
 
@@ -102,14 +112,20 @@ void __device__ dblkSolve_trans(const volatile T_ELEM *const minus_a, const int 
 {
    volatile T_ELEM __shared__ xs;
 
+   // See dblkSolve: explicit intra-warp barriers instead of relying on lockstep.
+   const unsigned long long lanemask =
+      (blkSize >= 64) ? ~0ull : ((1ull << blkSize) - 1ull);
+
 #pragma unroll 16
    for (int i=blkSize-1; i>=0; --i) {
      if (threadIdx.x==i) {
        if (!ISUNIT) val *= minus_a[i*lda+i];
        xs = val;
      }
+     SPRAL_SYNCWARP(lanemask);
      if (threadIdx.x < i)
        val += minus_a[i*lda+threadIdx.x] * xs;
+     SPRAL_SYNCWARP(lanemask);
    }
 }
 

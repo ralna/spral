@@ -64,21 +64,38 @@ compile all six kernels + the shim to device objects **and link the full
 hardware, which was not available here (work so far is configure + compile only):
 
 1. **Run-time correctness.** No SSIDS factorise/solve has been executed on a GPU.
-2. **Warp size 32 vs 64 (correctness risk).** `dtrsv.h` fixes
-   `TRSV_NB_TASK = 32` "= warpSize" and does warp-synchronous work. On AMD a
-   wavefront is 64 lanes; a 32-thread block is half a wavefront. This *may* be
-   safe (32 lanes are still lockstep within one wavefront) but must be verified
-   on hardware; likewise the reductions in `solve.cu`.
-3. **Inter-block synchronisation.** The batched trsv uses spin-locks with
-   `__threadfence_system()` + `atomicAdd`. The HIP/AMD memory model differs from
-   CUDA's; the busy-wait sync must be validated on-device.
+2. **Warp-synchronous trsv (fixed, needs on-device check).** `dblkSolve` /
+   `dblkSolve_trans` in `dtrsv.h` shared a `volatile` scalar across lanes
+   relying on 32-lane lockstep; they now use explicit `SPRAL_SYNCWARP` barriers
+   (correct on AMD wavefronts and NVIDIA Volta+). The fix compiles on both
+   backends but its numerical result must still be verified on hardware, and a
+   broader audit of the other `volatile`-shared patterns in `dtrsv.h`
+   (`slvinv`, `tocache`) is advisable.
+3. **Inter-block synchronisation (unresolved).** The batched trsv and the
+   assembly kernels use spin-locks (`while(sync[...] < ...)`) with
+   `__threadfence*` + `atomicAdd`. This assumes all blocks are co-resident
+   (forward progress) and the HIP/AMD memory model differs from CUDA's; it must
+   be validated on-device and may need a cooperative-launch rewrite. Note also
+   `dtrsv.h` mixes `__threadfence_system()` and `__threadfence()` for the same
+   pattern (device scope suffices for single-GPU).
 4. **hipBLAS semantics.** `spral_cublasDgemm` passes `alpha`/`beta` as host
    pointers — verify hipBLAS pointer-mode default matches.
 5. **`__launch_bounds__` re-tuning.** The per-backend `SPRAL_LAUNCH_BOUNDS` macro
-   now drops the NVIDIA-tuned min-blocks hint on AMD (so the compiler picks
+   drops the NVIDIA-tuned min-blocks hint on AMD (so the compiler picks
    occupancy); tuning proper AMD values needs profiling on the target arch.
 6. **`cudaDeviceSetSharedMemConfig`** is a no-op on AMD (LDS has no configurable
    bank width) — harmless, but confirm no perf assumption depends on it.
+
+## Bugs fixed during code review
+
+- **int64 index truncation** (would corrupt large factorizations, pre-existing):
+  `nnz` in `assemble.cu::cu_load_nodes_sc`, and `offc`/`offa` in
+  `syrk.cu` (`multisyrk_type::offc` was read into an `int`).
+- **Warp-synchronous races** in `dtrsv.h` `dblkSolve`/`dblkSolve_trans` — see (2).
+- **`SM_3X` relied on `__CUDA_ARCH__`** (undefined under hipcc, silently 0): now
+  selected explicitly per backend in `syrk.cu` and `reorder.cu`.
+- **`min`/`max` macros** guarded with `#ifndef` to avoid clashing with the
+  toolchain's `std::min`/`std::max`.
 
 ## Manual compile check
 

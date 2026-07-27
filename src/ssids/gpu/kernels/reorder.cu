@@ -12,14 +12,22 @@
 #include "ssids/gpu/kernels/datatypes.h"
 #include "cuda/cuda_check.h"
 
+#ifndef min
 #define min(x,y) ((x) < (y) ? (x) : (y))
+#endif
 
 #define BLOCK_SIZE 8
 #define MAX_CUDA_BLOCKS 65535
 
 //#define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350 || __CUDA_ARCH__ == 370)
 //FIXME: Verify if the code for Keplers (sm_3x) is still correct for the later GPUs.
+#if defined(__HIP__) || defined(SPRAL_USE_HIP)
+// AMD/HIP: __CUDA_ARCH__ is undefined; select explicitly (the !SM_3X path)
+// rather than relying on the macro silently evaluating to 0.
+#define SM_3X 0
+#else
 #define SM_3X (__CUDA_ARCH__ >= 300)
+#endif
 
 using namespace spral::ssids::gpu;
 

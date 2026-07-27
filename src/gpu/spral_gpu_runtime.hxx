@@ -133,3 +133,12 @@ using cublasOperation_t = hipblasOperation_t;
 #define SPRAL_LAUNCH_BOUNDS(maxThreads, minBlocks) \
    __launch_bounds__(maxThreads, minBlocks)
 #endif
+
+/* Intra-warp barrier over a lane mask. HIP requires a 64-bit mask (wavefronts
+ * are up to 64 lanes); CUDA uses a 32-bit mask. Callers build the mask as a
+ * 64-bit value and this casts to the width the backend expects. */
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIP__) || defined(SPRAL_USE_HIP)
+#define SPRAL_SYNCWARP(mask) __syncwarp((unsigned long long)(mask))
+#else
+#define SPRAL_SYNCWARP(mask) __syncwarp((unsigned)(mask))
+#endif

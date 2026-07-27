@@ -19,7 +19,9 @@
 #include "ssids/gpu/kernels/datatypes.h"
 #include "cuda/cuda_check.h"
 
+#ifndef min
 #define min(x,y) ((x) < (y) ? (x) : (y))
+#endif
 
 #define FAVOUR2x2 100
 #define CBLOCKS 3
