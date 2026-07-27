@@ -8,7 +8,7 @@
  * This code has not yet been publically released under any licence.
  */
 
-#include <cublas_v2.h>
+#include "gpu/spral_gpu_runtime.hxx" // maps CUDA <-> HIP for single-source builds
 #include "cuda/cuda_check.h"
 
 //#define MIN(x,y) (((x)>(y))?(y):(x))

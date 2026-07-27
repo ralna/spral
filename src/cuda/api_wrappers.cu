@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
-#include <cublas_v2.h>
+#include "gpu/spral_gpu_runtime.hxx" // maps CUDA <-> HIP for single-source builds
 
 // Following wrappers needed as cudaStream_t not interoperable
 extern "C" {

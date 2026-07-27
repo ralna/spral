@@ -6,9 +6,10 @@
 #include <stdint.h>
 #endif
 
-#include <cuda_runtime.h>
-#include <cuda_runtime_api.h>
+#include "gpu/spral_gpu_runtime.hxx" // maps CUDA <-> HIP for single-source builds
+#if !defined(__HIP_PLATFORM_AMD__) && !defined(__HIP__) && !defined(SPRAL_USE_HIP)
 #include <device_launch_parameters.h>
+#endif
 
 #include "cuda/cuda_check.h"
 #include "ssids/gpu/kernels/datatypes.h"

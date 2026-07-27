@@ -22,7 +22,9 @@ __inline__ __device__ T_ELEM loadVolatile(const volatile T_ELEM *const vptr)
 }
 
 #include "cuda/cuda_check.h"
+#if !defined(__HIP_PLATFORM_AMD__) && !defined(__HIP__) && !defined(SPRAL_USE_HIP)
 #include <cuComplex.h>
+#endif
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 
@@ -42,11 +44,20 @@ __inline__ __device__ T_ELEM loadVolatile(const volatile T_ELEM *const vptr)
 #define THREADSY_TASK 4
 #endif
 
-/** \brief Return physical SM id as per special register %smid. */
+/** \brief Return physical SM/CU id (profiling only, used under -DTIMING). */
 unsigned int __inline__ __device__ getSM(void) {
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIP__) || defined(SPRAL_USE_HIP)
+  /* AMD: read the hardware id register and extract the compute-unit id.
+   * Only ever consumed as profiling metadata (see times->sm under TIMING),
+   * so an approximate value is fine. */
+  unsigned int hwid;
+  __asm__ volatile("s_getreg_b32 %0, hwreg(HW_REG_HW_ID)" : "=s"(hwid));
+  return hwid;
+#else
   volatile unsigned int output;
   asm volatile("mov.u32 %0,%smid;" : "=r"(output) : );
   return output;
+#endif
 }
 
 /**
