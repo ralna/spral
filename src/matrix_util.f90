@@ -1006,7 +1006,9 @@ subroutine clean_cscl_oop_main_ptr32(context, multiplier, matrix_type, m, n, &
 
    return
 
-100 if(st /= 0) then
+100 continue
+    call cleanup_dup(duphead) ! free dup nodes stranded on the error path
+    if(st /= 0) then
       flag = ERROR_ALLOCATION
       call print_matrix_flag(context,nout,flag)
     end if
@@ -1390,7 +1392,9 @@ subroutine clean_cscl_oop_main(context, multiplier, matrix_type, m, n, &
 
    return
 
-100 if(st /= 0) then
+100 continue
+    call cleanup_dup(duphead) ! free dup nodes stranded on the error path
+    if(st /= 0) then
       flag = ERROR_ALLOCATION
       call print_matrix_flag(context,nout,flag)
     end if
@@ -1860,6 +1864,7 @@ subroutine convert_coord_to_cscl_ptr32_double(matrix_type, m, n, ne, row, col, &
             if(row_out(ptr_out(j)) .ne. j) then
                flag = ERROR_MISSING_DIAGONAL
                call print_matrix_flag(context,nout,flag)
+               call cleanup_dup(duphead) ! free dup nodes before erroring out
                return
             end if
          end if
@@ -1939,6 +1944,7 @@ subroutine convert_coord_to_cscl_ptr32_double(matrix_type, m, n, ne, row, col, &
    return
 
    100 continue
+   call cleanup_dup(duphead) ! free dup nodes stranded on the error path
    if(st /= 0) then
       flag = ERROR_ALLOCATION
       call print_matrix_flag(context,nout,flag)
@@ -2410,6 +2416,7 @@ subroutine convert_coord_to_cscl_ptr64_double(matrix_type, m, n, ne, row, col, &
             if(row_out(ptr_out(j)) .ne. j) then
                flag = ERROR_MISSING_DIAGONAL
                call print_matrix_flag(context,nout,flag)
+               call cleanup_dup(duphead) ! free dup nodes before erroring out
                return
             end if
          end if
@@ -2489,6 +2496,7 @@ subroutine convert_coord_to_cscl_ptr64_double(matrix_type, m, n, ne, row, col, &
    return
 
    100 continue
+   call cleanup_dup(duphead) ! free dup nodes stranded on the error path
    if(st /= 0) then
       flag = ERROR_ALLOCATION
       call print_matrix_flag(context,nout,flag)
