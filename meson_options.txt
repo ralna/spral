@@ -93,3 +93,27 @@ option('openmp',
        type : 'boolean',
        value : true,
        description : 'option to compile SPRAL with OpenMP')
+
+option('ssids_block_div',
+       type : 'integer',
+       min : 0,
+       value : 0,
+       description : 'SSIDS front-size-adaptive block size: fixed ramp divisor (block ~= front_rows / div); 0 selects the thread-scaled divisor ssids_block_tiles_per_thread * nthreads')
+
+option('ssids_block_tiles_per_thread',
+       type : 'integer',
+       min : 1,
+       value : 2,
+       description : 'SSIDS front-size-adaptive block size: target block-rows per thread when ssids_block_div is 0 (divisor = this * nthreads)')
+
+option('ssids_block_min',
+       type : 'integer',
+       min : 0,
+       value : 0,
+       description : 'SSIDS front-size-adaptive block size: minimum (floor) block size; 0 auto-selects it at configure time with a BLAS efficiency probe (meson/blas_block_probe.cxx)')
+
+option('ssids_block_max',
+       type : 'integer',
+       min : 32,
+       value : 512,
+       description : 'SSIDS front-size-adaptive block size: maximum (ceiling) block size')

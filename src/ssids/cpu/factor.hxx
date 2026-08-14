@@ -42,7 +42,8 @@ void factor_node_indef(
       struct cpu_factor_options const& options,
       ThreadStats& stats,
       std::vector<Workspace>& work,
-      PoolAlloc& pool_alloc
+      PoolAlloc& pool_alloc,
+      int nthreads
       ) {
    /* Extract useful information about node */
    int m = snode.nrow + node.ndelay_in;
@@ -59,7 +60,7 @@ void factor_node_indef(
       // Use an APP based pivot method
       node.nelim = ldlt_app_factor(
             m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work,
-            pool_alloc
+            pool_alloc, nthreads
             );
       if(node.nelim < 0) {
          stats.flag = static_cast<Flag>(node.nelim);
@@ -141,7 +142,8 @@ void factor_node_posdef(
       SymbolicNode const& snode,
       NumericNode<T, PoolAlloc> &node,
       struct cpu_factor_options const& options,
-      ThreadStats& stats
+      ThreadStats& stats,
+      int nthreads = 1 // serial by default (e.g. small-leaf subtree nodes)
       ) {
    /* Extract useful information about node */
    int m = snode.nrow;
@@ -153,7 +155,8 @@ void factor_node_posdef(
    /* Perform factorization */
    int flag;
    cholesky_factor(
-         m, n, lcol, ldl, beta, contrib, m-n, options.cpu_block_size, &flag
+         m, n, lcol, ldl, beta, contrib, m-n, options.cpu_block_size, &flag,
+         nthreads
          );
    if(flag!=-1) {
       node.nelim = flag+1;
@@ -178,10 +181,11 @@ void factor_node(
       struct cpu_factor_options const& options,
       ThreadStats& stats,
       std::vector<Workspace>& work,
-      PoolAlloc& pool_alloc
+      PoolAlloc& pool_alloc,
+      int nthreads
       ) {
-   if(posdef) factor_node_posdef(0.0, snode, node, options, stats);
-   else       factor_node_indef(ni, snode, node, options, stats, work, pool_alloc);
+   if(posdef) factor_node_posdef(0.0, snode, node, options, stats, nthreads);
+   else       factor_node_indef(ni, snode, node, options, stats, work, pool_alloc, nthreads);
 }
 
 }}} /* end of namespace spral::ssids::cpu */

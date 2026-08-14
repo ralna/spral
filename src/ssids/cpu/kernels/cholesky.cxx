@@ -10,6 +10,7 @@
 #include <cstdio> // FIXME: remove as only used for debug
 
 #include "ssids/profile.hxx"
+#include "ssids/cpu/kernels/block_size.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -30,7 +31,11 @@ namespace spral { namespace ssids { namespace cpu {
  * \param info is initialized to -1, and will be changed to the index of any
  *    column where a non-zero column is encountered.
  */
-void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd, int ldupd, int blksz, int *info) {
+void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd, int ldupd, int blksz, int *info, int nthreads) {
+   // A non-positive block size opts into the front-size-adaptive rule; a
+   // positive value keeps the historic fixed-block behaviour. nthreads is the
+   // size of the OpenMP team assigned to this subtree.
+   if(blksz <= 0) blksz = adaptive_block_size(m, INNER_BLOCK_SIZE, nthreads);
    if(n < blksz) {
       // Adjust so blocks have blksz**2 entries
       blksz = int((int64_t(blksz)*blksz) / n);

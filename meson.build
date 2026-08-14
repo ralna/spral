@@ -121,6 +121,43 @@ if build_gpu and nvcc_available and libcuda.found()
      endif
 endif
 
+# SSIDS front-size-adaptive block size tuning constants (see
+# src/ssids/cpu/kernels/block_size.hxx). Set at configure time, e.g.
+#   meson configure -Dssids_block_div=0 -Dssids_block_min=128 -Dssids_block_max=512
+ssids_block_max = get_option('ssids_block_max')
+
+# The block-size floor (ssids_block_min): a positive option value is used as-is;
+# 0 (the default) auto-selects it with a configure-time BLAS efficiency probe
+# (meson/blas_block_probe.cxx), which reports the smallest square tile at which
+# this machine's BLAS runs near peak. The probe is skipped when cross-compiling
+# and any failure falls back to a safe default, so it never blocks configure.
+ssids_block_min_opt = get_option('ssids_block_min')
+ssids_block_min_fallback = 128
+if ssids_block_min_opt > 0
+  ssids_block_min = ssids_block_min_opt
+elif meson.is_cross_build()
+  ssids_block_min = ssids_block_min_fallback
+  message('SSIDS block-size floor: cross build, using fallback @0@'.format(ssids_block_min))
+else
+  block_probe = cxx.run(files('meson/blas_block_probe.cxx'),
+                        dependencies : [libblas, lm],
+                        name : 'ssids blas block-size floor probe')
+  if block_probe.compiled() and block_probe.returncode() == 0
+    ssids_block_min = block_probe.stdout().strip().to_int()
+    message('SSIDS block-size floor: BLAS probe selected @0@'.format(ssids_block_min))
+  else
+    ssids_block_min = ssids_block_min_fallback
+    message('SSIDS block-size floor: probe did not run, using fallback @0@'.format(ssids_block_min))
+  endif
+endif
+if ssids_block_max < ssids_block_min
+  error('ssids_block_max (@0@) must be >= ssids_block_min (@1@)'.format(ssids_block_max, ssids_block_min))
+endif
+add_global_arguments('-DSPRAL_SSIDS_BLOCK_DIV=@0@'.format(get_option('ssids_block_div')), language : 'cpp')
+add_global_arguments('-DSPRAL_SSIDS_BLOCK_TILES_PER_THREAD=@0@'.format(get_option('ssids_block_tiles_per_thread')), language : 'cpp')
+add_global_arguments('-DSPRAL_SSIDS_BLOCK_MIN=@0@'.format(ssids_block_min), language : 'cpp')
+add_global_arguments('-DSPRAL_SSIDS_BLOCK_MAX=@0@'.format(ssids_block_max), language : 'cpp')
+
 # OpenMP
 if build_openmp
   if fc.get_id() == 'nvidia_hpc'

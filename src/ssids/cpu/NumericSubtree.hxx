@@ -160,7 +160,7 @@ public:
             auto* this_lcol = &nodes_[ni]; // for depend
             auto* parent_lcol = nodes_.data() + symb_[ni].parent; // for depend
             #pragma omp task default(none) \
-               firstprivate(ni) \
+               firstprivate(ni, num_threads) \
                shared(aval, abort, child_contrib, options, scaling, \
                       thread_stats, work) \
                depend(inout: this_lcol[0:1]) \
@@ -192,7 +192,7 @@ public:
                   factor_node<posdef>
                      (ni, symb_[ni], nodes_[ni], options,
                       thread_stats[this_thread], work,
-                      pool_alloc_);
+                      pool_alloc_, num_threads);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
 #ifdef _OPENMP
                      #pragma omp atomic write

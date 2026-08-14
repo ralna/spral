@@ -36,9 +36,9 @@ program run_prob
 
   real :: smanal, smfact, smaflop, smafact
 
-  integer, parameter :: nfact = 1
-  ! integer, parameter :: nfact = 50
-  ! integer, parameter :: nfact = 100
+  integer :: nfact = 1     ! override with env var SPRAL_NFACT for timing loops
+  character(len=32) :: nfact_env
+  integer :: nfact_stat
 
   integer, parameter :: nslv = 1
   ! integer, parameter :: nslv = 10
@@ -58,6 +58,9 @@ program run_prob
   call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
        flat_topology, ngpus)
   if (nrhs .lt. 1) stop
+
+  call get_environment_variable("SPRAL_NFACT", nfact_env, status=nfact_stat)
+  if (nfact_stat .eq. 0) read(nfact_env, *) nfact
 
   ! Read in a matrix
   write (*, "(3a)") "Reading '", filename, "'..."
